@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "12.finesse-eas",
-    "slug": "12.finesse-eas",
+    "name": "finesse-eas",
+    "slug": "finesse-eas",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.jman.finesseeas"
     },
     "web": {
       "bundler": "metro",
@@ -37,6 +38,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6371d192-1fb6-479a-a471-2dff814d8ba2"
+      }
+    },
+    "owner": "j-man"
   }
 }
