@@ -20,7 +20,7 @@ import Animated, {
   withTiming,
   withSpring,
 } from 'react-native-reanimated';
-import { SendHorizontal, Bot, AlertCircle } from 'lucide-react-native';
+import { SendHorizontal, Bot, CircleAlert as AlertCircle } from 'lucide-react-native';
 import { colors, spacing, fontSizes } from '@/constants/theme';
 import { initialMessages } from '@/constants/mockData';
 import GradientBackground from '@/components/GradientBackground';
