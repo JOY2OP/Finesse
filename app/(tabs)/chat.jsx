@@ -9,6 +9,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { 
@@ -19,17 +20,20 @@ import Animated, {
   withTiming,
   withSpring,
 } from 'react-native-reanimated';
-import { SendHorizontal, Bot } from 'lucide-react-native';
+import { SendHorizontal, Bot, AlertCircle } from 'lucide-react-native';
 import { colors, spacing, fontSizes } from '@/constants/theme';
-import { chatResponses, initialMessages } from '@/constants/mockData';
+import { initialMessages } from '@/constants/mockData';
 import GradientBackground from '@/components/GradientBackground';
 import ChatMessage from '@/components/ChatMessage';
+
+const BACKEND_URL = 'http://localhost:3001';
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState(initialMessages);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [connectionError, setConnectionError] = useState(false);
   const insets = useSafeAreaInsets();
   const flatListRef = useRef(null);
   const inputRef = useRef(null);
@@ -65,8 +69,50 @@ export default function ChatScreen() {
       }, 100);
     }
   }, [messages]);
+
+  // Test backend connection on component mount
+  useEffect(() => {
+    testBackendConnection();
+  }, []);
+
+  const testBackendConnection = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/health`);
+      if (response.ok) {
+        setConnectionError(false);
+      } else {
+        setConnectionError(true);
+      }
+    } catch (error) {
+      console.log('Backend connection test failed:', error);
+      setConnectionError(true);
+    }
+  };
+
+  const sendMessageToBackend = async (message) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get response');
+      }
+
+      const data = await response.json();
+      return data.reply;
+    } catch (error) {
+      console.error('Backend request failed:', error);
+      throw error;
+    }
+  };
   
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!inputText.trim()) return;
     
     // Animate send button
@@ -84,51 +130,54 @@ export default function ChatScreen() {
     };
     
     setMessages(prev => [...prev, userMessage]);
+    const currentMessage = inputText.trim();
     setInputText('');
     
-    // Simulate bot typing
+    // Show typing indicator
     setIsTyping(true);
     typingIndicatorOpacity.value = withTiming(1, { duration: 300 });
     
-    // Find response or use default
-    setTimeout(() => {
+    try {
+      // Send to backend
+      const reply = await sendMessageToBackend(currentMessage);
+      
+      // Hide typing indicator
       typingIndicatorOpacity.value = withTiming(0, { duration: 300 });
       
       setTimeout(() => {
         setIsTyping(false);
         
-        // Find a matching response or use default
-        let responseText = null;
-        const userTextLower = userMessage.text.toLowerCase();
-        
-        // Check for exact matches first
-        if (chatResponses[userTextLower]) {
-          responseText = chatResponses[userTextLower];
-        } else {
-          // Check for partial matches
-          for (const [key, value] of Object.entries(chatResponses)) {
-            if (userTextLower.includes(key)) {
-              responseText = value;
-              break;
-            }
-          }
-          
-          // If no match found, use a default response
-          if (!responseText) {
-            responseText = "I'm not sure how to answer that specific question. Could you ask about budgeting, investing, saving money, or another financial topic?";
-          }
-        }
-        
         const botMessage = {
           id: (Date.now() + 1).toString(),
-          text: responseText,
+          text: reply,
           sender: 'bot',
           timestamp: Date.now(),
         };
         
         setMessages(prev => [...prev, botMessage]);
+        setConnectionError(false);
       }, 300);
-    }, 1500);
+      
+    } catch (error) {
+      // Hide typing indicator
+      typingIndicatorOpacity.value = withTiming(0, { duration: 300 });
+      
+      setTimeout(() => {
+        setIsTyping(false);
+        setConnectionError(true);
+        
+        // Add error message
+        const errorMessage = {
+          id: (Date.now() + 1).toString(),
+          text: "I'm having trouble connecting to the server right now. Please make sure the backend is running and try again.",
+          sender: 'bot',
+          timestamp: Date.now(),
+          isError: true,
+        };
+        
+        setMessages(prev => [...prev, errorMessage]);
+      }, 300);
+    }
   };
   
   const sendButtonStyle = useAnimatedStyle(() => {
@@ -161,6 +210,12 @@ export default function ChatScreen() {
             entering={FadeIn.duration(600)}
           >
             <Text style={styles.headerTitle}>Finesse Assistant</Text>
+            {connectionError && (
+              <View style={styles.connectionStatus}>
+                <AlertCircle size={16} color={colors.status.warning} />
+                <Text style={styles.connectionText}>Backend Offline</Text>
+              </View>
+            )}
           </Animated.View>
           
           <FlatList
@@ -207,16 +262,17 @@ export default function ChatScreen() {
                 blurOnSubmit={false}
                 autoCorrect={true}
                 autoCapitalize="sentences"
+                editable={!isTyping}
               />
             </View>
             <Animated.View style={sendButtonStyle}>
               <TouchableOpacity
                 style={[
                   styles.sendButton,
-                  !inputText.trim() && styles.sendButtonDisabled,
+                  (!inputText.trim() || isTyping) && styles.sendButtonDisabled,
                 ]}
                 onPress={sendMessage}
-                disabled={!inputText.trim()}
+                disabled={!inputText.trim() || isTyping}
                 activeOpacity={0.8}
               >
                 <SendHorizontal size={20} color="#fff" />
@@ -239,11 +295,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: spacing.md,
+    position: 'relative',
   },
   headerTitle: {
     fontSize: fontSizes.lg,
     fontWeight: '600',
     color: colors.text.primary,
+  },
+  connectionStatus: {
+    position: 'absolute',
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${colors.status.warning}20`,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    borderRadius: 12,
+  },
+  connectionText: {
+    color: colors.status.warning,
+    fontSize: fontSizes.xs,
+    fontWeight: '500',
+    marginLeft: spacing.xs / 2,
   },
   messagesList: {
     paddingVertical: spacing.md,
