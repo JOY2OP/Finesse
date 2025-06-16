@@ -1,10 +1,13 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
+const OpenAI = require("openai");
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY});
 
 // Middleware
 app.use(cors());
@@ -20,11 +23,13 @@ app.post('/chat', async (req, res) => {
   try {
     const { message } = req.body;
 
-    if (!message || typeof message !== 'string') {
-      return res.status(400).json({ 
-        error: 'Message is required and must be a string' 
-      });
-    }
+    console.log("incoming-message: ", message); //incoming message
+
+    // if (!message || typeof message !== 'string') {
+    //   return res.status(400).json({ 
+    //     error: 'Message is required and must be a string' 
+    //   });
+    // }
 
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({ 
@@ -33,34 +38,18 @@ app.post('/chat', async (req, res) => {
     }
 
     // Call OpenAI API
-    const openaiResponse = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a helpful financial assistant for the Finesse app. You provide advice on budgeting, investing, saving money, debt management, and other personal finance topics. Keep your responses concise, practical, and friendly. Focus on actionable advice that users can implement immediately.`
-          },
-          {
-            role: 'user',
-            content: message
-          }
-        ],
-        max_tokens: 500,
-        temperature: 0.7
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+    const completion = await openai.chat.completions.create({
+      messages: req.body.message ,
+      model: "gpt-4.1",
+      store: true,
+    });
+  console.log("completion", completion)
+  //   console.log("output======",completion.choices[0].message.content);
+  // return res.json(completion.choices[0].message.content);
 
-    const reply = openaiResponse.data.choices[0].message.content;
-
-    res.json({ reply });
+    const reply = completion.choices[0].message.content
+    console.log(reply)
+    return res.json({ reply });
 
   } catch (error) {
     console.error('Chat endpoint error:', error.response?.data || error.message);

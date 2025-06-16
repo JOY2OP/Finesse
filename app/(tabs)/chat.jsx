@@ -1,32 +1,31 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TextInput, 
-  FlatList, 
-  TouchableOpacity, 
+import ChatMessage from '@/components/ChatMessage';
+import GradientBackground from '@/components/GradientBackground';
+import { initialMessages } from '@/constants/mockData';
+import { colors, fontSizes, spacing } from '@/constants/theme';
+import { CircleAlert as AlertCircle, Bot, SendHorizontal } from 'lucide-react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  FlatList,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
-  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { 
+import Animated, {
   FadeIn,
-  useSharedValue,
   useAnimatedStyle,
+  useSharedValue,
   withSequence,
-  withTiming,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
-import { SendHorizontal, Bot, CircleAlert as AlertCircle } from 'lucide-react-native';
-import { colors, spacing, fontSizes } from '@/constants/theme';
-import { initialMessages } from '@/constants/mockData';
-import GradientBackground from '@/components/GradientBackground';
-import ChatMessage from '@/components/ChatMessage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const BACKEND_URL = 'http://localhost:3001';
+const BACKEND_URL = 'http://localhost:3000';
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState(initialMessages);
@@ -105,6 +104,7 @@ export default function ChatScreen() {
       }
 
       const data = await response.json();
+      console.log("data: ", data)
       return data.reply;
     } catch (error) {
       console.error('Backend request failed:', error);
@@ -130,7 +130,8 @@ export default function ChatScreen() {
     };
     
     setMessages(prev => [...prev, userMessage]);
-    const currentMessage = inputText.trim();
+    // const currentMessage = inputText.trim();
+    const currentMessage = [{ role: "user", content: inputText.trim()}];
     setInputText('');
     
     // Show typing indicator
@@ -139,6 +140,7 @@ export default function ChatScreen() {
     
     try {
       // Send to backend
+      console.log("currentMessage: ", currentMessage)
       const reply = await sendMessageToBackend(currentMessage);
       
       // Hide typing indicator
@@ -169,7 +171,7 @@ export default function ChatScreen() {
         // Add error message
         const errorMessage = {
           id: (Date.now() + 1).toString(),
-          text: "I'm having trouble connecting to the server right now. Please make sure the backend is running and try again.",
+          text: "I'm having trouble connecting to the server right now. Please check if you have active internet connection.",
           sender: 'bot',
           timestamp: Date.now(),
           isError: true,
