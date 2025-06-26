@@ -1,6 +1,6 @@
 import GradientBackground from '@/components/GradientBackground';
 import { colors, fontSizes, spacing } from '@/constants/theme';
-import { ArrowLeft, CheckCircle, Shield } from 'lucide-react-native';
+import { ArrowLeft, CircleCheck as CheckCircle, Shield } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
