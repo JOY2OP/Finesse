@@ -3,7 +3,7 @@ import GradientBackground from '@/components/GradientBackground';
 import { initialMessages } from '@/constants/mockData';
 import { colors, fontSizes, spacing } from '@/constants/theme';
 import { CircleAlert as AlertCircle, Bot, SendHorizontal } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Keyboard,
@@ -25,7 +25,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const BACKEND_URL = 'http://localhost:3001';
+const BACKEND_URL = 'http://localhost:3000';
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState(initialMessages);
@@ -83,13 +83,14 @@ export default function ChatScreen() {
         setConnectionError(true);
       }
     } catch (error) {
-      console.log('Backend connection test failed:', error);
+      console.log('🚩Backend connection TEST failed:', error);
       setConnectionError(true);
     }
   };
 
   const sendMessageToBackend = async (message) => {
     try {
+      console.log("trying sending to backend")
       const response = await fetch(`${BACKEND_URL}/chat`, {
         method: 'POST',
         headers: {
@@ -107,7 +108,7 @@ export default function ChatScreen() {
       console.log("data: ", data)
       return data.reply;
     } catch (error) {
-      console.error('Backend request failed:', error);
+      console.error('🚩Backend request failed:', error);
       throw error;
     }
   };

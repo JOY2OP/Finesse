@@ -27,7 +27,7 @@ cp .env.example .env
 OPENAI_API_KEY=your_actual_openai_api_key_here
 SUPABASE_URL=your_supabase_url_here
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
-PORT=3001
+PORT=3000
 ```
 
 ## Running the Server
@@ -36,7 +36,7 @@ PORT=3001
 npm start
 ```
 
-The server will start on `http://localhost:3001`
+The server will start on `http://localhost:3000`
 
 ## API Endpoints
 
@@ -76,7 +76,7 @@ The server will start on `http://localhost:3001`
 - `OPENAI_API_KEY`: Your OpenAI API key (required)
 - `SUPABASE_URL`: Your Supabase project URL (required for auth)
 - `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key (required for auth)
-- `PORT`: Server port (default: 3001)
+- `PORT`: Server port (default: 3000)
 
 ## Getting API Keys
 
