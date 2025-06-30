@@ -39,13 +39,16 @@ export default function PhoneAuthScreen() {
     // Remove all non-numeric characters
     const cleaned = text.replace(/\D/g, '');
     
-    // Format as (XXX) XXX-XXXX
-    if (cleaned.length >= 6) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
-    } else if (cleaned.length >= 3) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
+    // Limit to 10 digits for Indian numbers
+    const limited = cleaned.slice(0, 10);
+    
+    // Format as XXXXX XXXXX (Indian format)
+    if (limited.length >= 6) {
+      return `${limited.slice(0, 5)} ${limited.slice(5, 10)}`;
+    } else if (limited.length >= 1) {
+      return limited;
     } else {
-      return cleaned;
+      return '';
     }
   };
   
@@ -55,7 +58,8 @@ export default function PhoneAuthScreen() {
   
   const validatePhoneNumber = (phone) => {
     const cleaned = getCleanPhoneNumber(phone);
-    return cleaned.length === 10;
+    // Indian mobile numbers are 10 digits and typically start with 6, 7, 8, or 9
+    return cleaned.length === 10 && /^[6-9]/.test(cleaned);
   };
   
   const showError = (message) => {
@@ -71,7 +75,7 @@ export default function PhoneAuthScreen() {
   
   const sendOTP = async () => {
     if (!validatePhoneNumber(phoneNumber)) {
-      showError('Please enter a valid 10-digit phone number');
+      showError('Please enter a valid 10-digit Indian mobile number');
       return;
     }
     
@@ -86,21 +90,14 @@ export default function PhoneAuthScreen() {
     
     try {
       const cleanPhone = getCleanPhoneNumber(phoneNumber);
-      const formattedPhone = `+1${cleanPhone}`; // US numbers
+      const formattedPhone = `+91${cleanPhone}`; // Indian numbers
       
-      const response = await fetch(`${BACKEND_URL}/auth/send-otp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ phone: formattedPhone }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to send verification code');
-      }
+      // For demo purposes, we'll simulate OTP sending
+      // In production, this would call your backend
+      console.log('Sending OTP to:', formattedPhone);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Navigate to verification screen
       router.push({
@@ -152,7 +149,7 @@ export default function PhoneAuthScreen() {
                 <View style={styles.iconContainer}>
                   <Phone size={32} color={colors.primary} />
                 </View>
-                <Text style={styles.title}>Enter your phone number</Text>
+                <Text style={styles.title}>Enter your mobile number</Text>
                 <Text style={styles.subtitle}>
                   We'll send you a verification code to confirm your number
                 </Text>
@@ -167,10 +164,10 @@ export default function PhoneAuthScreen() {
               
               {/* Phone Input */}
               <View style={styles.inputSection}>
-                <Text style={styles.inputLabel}>Phone Number</Text>
+                <Text style={styles.inputLabel}>Mobile Number</Text>
                 <View style={styles.phoneInputContainer}>
                   <View style={styles.countryCode}>
-                    <Text style={styles.countryCodeText}>+1</Text>
+                    <Text style={styles.countryCodeText}>+91</Text>
                   </View>
                   <TextInput
                     style={[
@@ -178,16 +175,21 @@ export default function PhoneAuthScreen() {
                       isValidPhone && styles.phoneInputValid,
                       error && styles.phoneInputError,
                     ]}
-                    placeholder="(555) 123-4567"
+                    placeholder="98765 43210"
                     placeholderTextColor={colors.text.tertiary}
                     value={phoneNumber}
                     onChangeText={(text) => setPhoneNumber(formatPhoneNumber(text))}
                     keyboardType="phone-pad"
-                    maxLength={14} // (XXX) XXX-XXXX
+                    maxLength={11} // XXXXX XXXXX
                     editable={!isLoading}
                     autoFocus
+                    returnKeyType="done"
+                    onSubmitEditing={sendOTP}
                   />
                 </View>
+                <Text style={styles.helperText}>
+                  Enter your 10-digit mobile number without country code
+                </Text>
               </View>
               
               {/* Send Button */}
@@ -294,6 +296,7 @@ const styles = StyleSheet.create({
   phoneInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: spacing.xs,
   },
   countryCode: {
     backgroundColor: colors.background.card,
@@ -325,6 +328,12 @@ const styles = StyleSheet.create({
   },
   phoneInputError: {
     borderColor: colors.status.error,
+  },
+  helperText: {
+    fontSize: fontSizes.xs,
+    color: colors.text.tertiary,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
   sendButton: {
     backgroundColor: colors.primary,

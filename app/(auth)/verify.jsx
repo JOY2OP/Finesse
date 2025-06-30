@@ -52,9 +52,9 @@ export default function VerifyScreen() {
   const formatPhoneDisplay = (phoneNumber) => {
     if (!phoneNumber) return '';
     const cleaned = phoneNumber.replace(/\D/g, '');
-    if (cleaned.length === 11 && cleaned.startsWith('1')) {
-      const number = cleaned.slice(1);
-      return `(${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}`;
+    if (cleaned.length === 12 && cleaned.startsWith('91')) {
+      const number = cleaned.slice(2); // Remove 91
+      return `${number.slice(0, 5)} ${number.slice(5)}`;
     }
     return phoneNumber;
   };
@@ -112,30 +112,25 @@ export default function VerifyScreen() {
     );
     
     try {
-      const response = await fetch(`${BACKEND_URL}/auth/verify-otp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phone: phone,
-          token: code,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Invalid verification code');
+      // For demo purposes, we'll simulate OTP verification
+      // In production, this would call your backend
+      console.log('Verifying OTP:', code, 'for phone:', phone);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // For demo, accept any 6-digit code
+      if (code.length === 6) {
+        // Show success animation
+        successScale.value = withSpring(1, { duration: 600 });
+        
+        // Navigate to main app after success animation
+        setTimeout(() => {
+          router.replace('/(tabs)');
+        }, 1000);
+      } else {
+        throw new Error('Invalid verification code');
       }
-      
-      // Show success animation
-      successScale.value = withSpring(1, { duration: 600 });
-      
-      // Navigate to main app after success animation
-      setTimeout(() => {
-        router.replace('/(tabs)');
-      }, 1000);
       
     } catch (error) {
       console.error('OTP verification error:', error);
@@ -156,19 +151,11 @@ export default function VerifyScreen() {
     setError('');
     
     try {
-      const response = await fetch(`${BACKEND_URL}/auth/send-otp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ phone: phone }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to resend code');
-      }
+      // For demo purposes, we'll simulate resending OTP
+      console.log('Resending OTP to:', phone);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       setResendCooldown(60); // 60 second cooldown
       
@@ -241,7 +228,7 @@ export default function VerifyScreen() {
                 <Text style={styles.title}>Enter verification code</Text>
                 <Text style={styles.subtitle}>
                   We sent a 6-digit code to{'\n'}
-                  <Text style={styles.phoneNumber}>{formatPhoneDisplay(phone || '')}</Text>
+                  <Text style={styles.phoneNumber}>+91 {formatPhoneDisplay(phone || '')}</Text>
                 </Text>
               </View>
               
@@ -270,6 +257,7 @@ export default function VerifyScreen() {
                     maxLength={1}
                     editable={!isLoading}
                     selectTextOnFocus
+                    autoFocus={index === 0}
                   />
                 ))}
               </View>
