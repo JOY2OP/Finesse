@@ -1,9 +1,9 @@
 import GradientBackground from '@/components/GradientBackground';
 import { colors, fontSizes, spacing } from '@/constants/theme';
+import { router } from 'expo-router';
 import { ArrowRight, Phone } from 'lucide-react-native';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -23,9 +23,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 
-const BACKEND_URL = 'http://localhost:3001';
+const BACKEND_URL = 'http://localhost:3000';
 
 export default function PhoneAuthScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -87,7 +86,7 @@ export default function PhoneAuthScreen() {
     
     try {
       const cleanPhone = getCleanPhoneNumber(phoneNumber);
-      const formattedPhone = `+1${cleanPhone}`; // Assuming US numbers
+      const formattedPhone = `+91${cleanPhone}`; // Assuming IN numbers
       
       const response = await fetch(`${BACKEND_URL}/auth/send-otp`, {
         method: 'POST',

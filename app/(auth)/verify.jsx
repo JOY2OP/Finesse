@@ -1,7 +1,8 @@
 import GradientBackground from '@/components/GradientBackground';
 import { colors, fontSizes, spacing } from '@/constants/theme';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, CircleCheck as CheckCircle, Shield } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -22,9 +23,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
 
-const BACKEND_URL = 'http://localhost:3001';
+const BACKEND_URL = 'http://localhost:3000';
 
 export default function VerifyScreen() {
   const { phone } = useLocalSearchParams();

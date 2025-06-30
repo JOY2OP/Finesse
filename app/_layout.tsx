@@ -1,11 +1,11 @@
+import { supabase } from '@/backend/supabase';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
+import { Session } from '@supabase/supabase-js';
 import 'expo-dev-client';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { Session } from '@supabase/supabase-js';
+import { StyleSheet, Text, View } from 'react-native';
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -15,7 +15,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     // Check if Supabase is configured before attempting to use it
-    if (!isSupabaseConfigured() || !supabase) {
+    if ( !supabase) {
       setIsLoading(false);
       return;
     }
@@ -42,7 +42,7 @@ export default function RootLayout() {
   }
 
   // Show configuration error if Supabase is not properly set up
-  if (!isSupabaseConfigured() || !supabase) {
+  if (!supabase) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorTitle}>Configuration Error</Text>
