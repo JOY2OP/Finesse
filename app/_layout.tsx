@@ -14,45 +14,14 @@ export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if Supabase is configured before attempting to use it
-    if (!supabase) {
-      setIsLoading(false);
-      return;
-    }
-
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setIsLoading(false);
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setIsLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    // For testing purposes, we'll skip the session check and always show auth
+    // In production, you would check for existing session here
+    setSession(null); // Force auth flow
+    setIsLoading(false);
   }, []);
 
   if (isLoading) {
     return null; // Or a loading screen
-  }
-
-  // Show configuration error if Supabase is not properly set up
-  if (!supabase) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorTitle}>Configuration Error</Text>
-        <Text style={styles.errorMessage}>
-          Supabase is not properly configured. Please check your environment variables:
-        </Text>
-        <Text style={styles.errorDetail}>• EXPO_PUBLIC_SUPABASE_URL</Text>
-        <Text style={styles.errorDetail}>• EXPO_PUBLIC_SUPABASE_ANON_KEY</Text>
-      </View>
-    );
   }
 
   return (
