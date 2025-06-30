@@ -15,7 +15,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     // Check if Supabase is configured before attempting to use it
-    if ( !supabase) {
+    if (!supabase) {
       setIsLoading(false);
       return;
     }
