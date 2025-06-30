@@ -24,7 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const BACKEND_URL = 'http://localhost:3001';
+const BACKEND_URL = 'http://localhost:3000';
 
 export default function VerifyScreen() {
   const { phone } = useLocalSearchParams();
