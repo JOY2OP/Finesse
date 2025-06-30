@@ -18,3 +18,8 @@ export const supabase = supabaseUrl && supabaseAnonKey
       },
     })
   : null;
+
+// Add a default export to satisfy the route requirement
+export default function SupabaseConfig() {
+  return null;
+}
