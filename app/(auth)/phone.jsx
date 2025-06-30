@@ -86,7 +86,7 @@ export default function PhoneAuthScreen() {
     
     try {
       const cleanPhone = getCleanPhoneNumber(phoneNumber);
-      const formattedPhone = `+91${cleanPhone}`; // Assuming IN numbers
+      const formattedPhone = `+1${cleanPhone}`; // US numbers
       
       const response = await fetch(`${BACKEND_URL}/auth/send-otp`, {
         method: 'POST',
