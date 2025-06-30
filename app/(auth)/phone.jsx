@@ -24,7 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const BACKEND_URL = 'http://localhost:3000';
+const BACKEND_URL = 'http://localhost:3001';
 
 export default function PhoneAuthScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -86,7 +86,7 @@ export default function PhoneAuthScreen() {
     
     try {
       const cleanPhone = getCleanPhoneNumber(phoneNumber);
-      const formattedPhone = `+91${cleanPhone}`; // Assuming IN numbers
+      const formattedPhone = `+1${cleanPhone}`; // US numbers
       
       const response = await fetch(`${BACKEND_URL}/auth/send-otp`, {
         method: 'POST',
