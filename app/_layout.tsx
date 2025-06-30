@@ -1,4 +1,4 @@
-import { supabase } from '@/backend/supabase';
+import { supabase } from '@/app/lib/supabase';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { Session } from '@supabase/supabase-js';
 import 'expo-dev-client';
