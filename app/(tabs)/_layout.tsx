@@ -1,8 +1,7 @@
+import { colors } from '@/constants/theme';
 import { Tabs } from 'expo-router';
 import { Chrome as Home, MessageCircle } from 'lucide-react-native';
-import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '@/constants/theme';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();

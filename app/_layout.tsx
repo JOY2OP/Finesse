@@ -1,11 +1,10 @@
-import { supabase } from '@/app/lib/supabase';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { Session } from '@supabase/supabase-js';
 import 'expo-dev-client';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -23,7 +22,8 @@ export default function RootLayout() {
   if (isLoading) {
     return null; // Or a loading screen
   }
-
+  let ses = false;
+  console.log(ses)
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>
