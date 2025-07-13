@@ -1,17 +1,52 @@
 import ExpenseItem from '@/components/ExpenseItem';
 import GradientBackground from '@/components/GradientBackground';
+import { Storage, TypedStorage } from '@/app/lib/storage';
 import { initialExpenses } from '@/constants/mockData';
 import { colors, fontSizes, spacing } from '@/constants/theme';
 import { Search as SearchIcon } from 'lucide-react-native';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const [expenses, setExpenses] = useState(initialExpenses);
+  const [isLoading, setIsLoading] = useState(true);
   const insets = useSafeAreaInsets();
   const flatListRef = useRef(null);
+  
+  // Load expenses from storage on component mount
+  useEffect(() => {
+    loadExpenses();
+  }, []);
+  
+  // Save expenses to storage whenever expenses change
+  useEffect(() => {
+    if (!isLoading) {
+      saveExpenses();
+    }
+  }, [expenses, isLoading]);
+  
+  const loadExpenses = async () => {
+    try {
+      const storedExpenses = await TypedStorage.getObject('expenses');
+      if (storedExpenses && Array.isArray(storedExpenses)) {
+        setExpenses(storedExpenses);
+      }
+    } catch (error) {
+      console.error('Error loading expenses:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const saveExpenses = async () => {
+    try {
+      await TypedStorage.setObject('expenses', expenses);
+    } catch (error) {
+      console.error('Error saving expenses:', error);
+    }
+  };
   
   const handleCategoryChange = useCallback((expenseId, newCategory) => {
     setExpenses(prevExpenses => 
@@ -20,6 +55,16 @@ export default function HomeScreen() {
       )
     );
   }, []);
+
+  if (isLoading) {
+    return (
+      <GradientBackground>
+        <View style={[styles.container, styles.loadingContainer, { paddingBottom: insets.bottom }]}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </GradientBackground>
+    );
+  }
 
   // Calculate total expenses by category
   const expenseTotals = expenses.reduce((acc, expense) => {
@@ -156,5 +201,13 @@ const styles = StyleSheet.create({
   },
   expensesList: {
     paddingBottom: spacing.xl,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: fontSizes.md,
+    color: colors.text.secondary,
   },
 });
