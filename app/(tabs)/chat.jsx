@@ -1,5 +1,6 @@
 import ChatMessage from '@/components/ChatMessage';
 import GradientBackground from '@/components/GradientBackground';
+import { Storage, TypedStorage } from '@/app/lib/storage';
 import { initialMessages } from '@/constants/mockData';
 import { colors, fontSizes, spacing } from '@/constants/theme';
 import { CircleAlert as AlertCircle, Bot, SendHorizontal } from 'lucide-react-native';
@@ -31,6 +32,7 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState(initialMessages);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [connectionError, setConnectionError] = useState(false);
   const insets = useSafeAreaInsets();
@@ -39,6 +41,18 @@ export default function ChatScreen() {
   
   const sendButtonScale = useSharedValue(1);
   const typingIndicatorOpacity = useSharedValue(0);
+  
+  // Load messages from storage on component mount
+  useEffect(() => {
+    loadMessages();
+  }, []);
+  
+  // Save messages to storage whenever messages change
+  useEffect(() => {
+    if (!isLoading) {
+      saveMessages();
+    }
+  }, [messages, isLoading]);
   
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
@@ -73,6 +87,27 @@ export default function ChatScreen() {
   useEffect(() => {
     testBackendConnection();
   }, []);
+
+  const loadMessages = async () => {
+    try {
+      const storedMessages = await TypedStorage.getObject('chatMessages');
+      if (storedMessages && Array.isArray(storedMessages)) {
+        setMessages(storedMessages);
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const saveMessages = async () => {
+    try {
+      await TypedStorage.setObject('chatMessages', messages);
+    } catch (error) {
+      console.error('Error saving messages:', error);
+    }
+  };
 
   const testBackendConnection = async () => {
     try {
@@ -194,6 +229,16 @@ export default function ChatScreen() {
       opacity: typingIndicatorOpacity.value,
     };
   });
+
+  if (isLoading) {
+    return (
+      <GradientBackground>
+        <View style={[styles.container, styles.loadingContainer, { paddingBottom: insets.bottom }]}>
+          <Text style={styles.loadingText}>Loading chat...</Text>
+        </View>
+      </GradientBackground>
+    );
+  }
 
   return (
     <GradientBackground>
@@ -379,5 +424,13 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     fontSize: fontSizes.xs,
     marginLeft: spacing.xs,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: fontSizes.md,
+    color: colors.text.secondary,
   },
 });
