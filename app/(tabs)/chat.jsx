@@ -1,6 +1,6 @@
+import { TypedStorage } from '@/app/lib/storage';
 import ChatMessage from '@/components/ChatMessage';
 import GradientBackground from '@/components/GradientBackground';
-import { Storage, TypedStorage } from '@/app/lib/storage';
 import { initialMessages } from '@/constants/mockData';
 import { colors, fontSizes, spacing } from '@/constants/theme';
 import { CircleAlert as AlertCircle, Bot, SendHorizontal } from 'lucide-react-native';
@@ -26,7 +26,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const BACKEND_URL = 'http://localhost:3000';
+const BACKEND_URL = 'http://192.168.31.76:3000';
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState(initialMessages);

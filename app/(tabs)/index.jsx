@@ -5,9 +5,10 @@ import { initialExpenses } from '@/constants/mockData';
 import { colors, fontSizes, spacing } from '@/constants/theme';
 import { Search as SearchIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View, Button } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 export default function HomeScreen() {
   const [expenses, setExpenses] = useState(initialExpenses);
@@ -15,6 +16,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const flatListRef = useRef(null);
   
+  const router = useRouter();
   // Load expenses from storage on component mount
   useEffect(() => {
     loadExpenses();
@@ -88,6 +90,8 @@ export default function HomeScreen() {
   return (
     <GradientBackground>
       <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+         <Button title="Go to Phone" onPress={() => router.push('/phone')} />
+         <Button title="Go to Verify" onPress={() => router.push('/verify')} />
         <Animated.View 
           style={styles.header}
           entering={FadeIn.duration(600)}

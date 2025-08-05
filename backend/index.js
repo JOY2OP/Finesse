@@ -2,7 +2,10 @@ const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const OpenAI = require("openai");
+
 const authRoutes = require('./auth');
+const aaRoutes = require('./aa');
+
 require('dotenv').config();
 
 const app = express();
@@ -15,7 +18,10 @@ app.use(cors());
 app.use(express.json());
 
 // Auth routes
-app.use('/auth', authRoutes);
+app.use('/auth', authRoutes); //middleware
+
+// Setu routes
+app.use('/aa', aaRoutes); //middleware
 
 // Health check endpoint
 app.get('/health', (req, res) => {
