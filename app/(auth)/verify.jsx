@@ -27,6 +27,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {supabase} from '../lib/supabase'
 // import { useRouter } from 'expo-router';
 
+const BACKEND_URL = 'http://192.168.31.76:3000';
+
 export default function VerifyScreen() {
   const { phone } = useLocalSearchParams();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -99,10 +101,10 @@ export default function VerifyScreen() {
   const verifyOTP = async (otpCode) => {
     const code = otpCode || otp.join('');
     
-    if (code.length !== 6) {
-      showError('Please enter the complete 6-digit code');
-      return;
-    }
+    // if (code.length !== 6) {
+    //   showError('Please enter the complete 6-digit code');
+    //   return;
+    // }
     
     setIsLoading(true);
     setError('');
@@ -114,11 +116,9 @@ export default function VerifyScreen() {
     );
     
     try {
-      // For demo purposes, we'll simulate OTP verification
-      // In production, this would call your backend
       console.log('Verifying OTP:', code, 'for phone:', phone);
       
-      // Simulate API delay
+      //Verify OTP
         const response = await supabase.auth.verifyOtp({
             phone,
             token: code,
@@ -132,6 +132,10 @@ export default function VerifyScreen() {
             console.log(error)
             return;
         } else {
+            //TODO:generate setu sesssion here
+            openwebview(phone);
+            
+            //Route the user to tabs
             router.replace('/(tabs)');
         }
       
@@ -147,6 +151,25 @@ export default function VerifyScreen() {
     }
   };
   
+  const openwebview = async(phone) => { 
+    try{
+       console.log("trying sending to backend")
+      const response = await fetch(`${BACKEND_URL}/aa`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone }),
+      });
+      const data = await response.json();
+      console.log("data: ", data)
+
+
+    }catch(err){
+      console.log("ERROR IN OPENING WEBVIEW: ", err)
+    }
+  }
+
   const resendOTP = async () => {
     if (resendCooldown > 0) return;
     
@@ -273,7 +296,7 @@ export default function VerifyScreen() {
                     (!isComplete || isLoading) && styles.verifyButtonDisabled,
                   ]}
                   onPress={() => verifyOTP()}
-                  disabled={!isComplete || isLoading}
+                  // disabled={!isComplete || isLoading}
                   activeOpacity={0.8}
                 >
                   {isLoading ? (

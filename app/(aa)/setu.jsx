@@ -1,21 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text } from 'react-native'
+import { WebView } from 'react-native-webview';
+import { useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View, Button } from 'react-native';
+import { colors, fontSizes, spacing } from '@/constants/theme';
+import GradientBackground from '@/components/GradientBackground';
 
-export default function aa() {
-  const [text, setText] = useState(null);
-  console.log(text);
-   const onPress = () => console.log("===text====",text);
+export default function WebviewScreen({ searchParams }) {
+  const insets = useSafeAreaInsets();
+  const { url } = useLocalSearchParams();
+  // console.log('url=========',url)
   return (
-    <View>
-      setu screen
-      <TextInput
-          // style={styles.input}
-          onChangeText={setText}
-          value={text}
-      />  
-      <TouchableOpacity onPress={onPress}>
-        <Text>Press Here</Text>
-      </TouchableOpacity>
-    </View>
-  )
+     <GradientBackground>
+      <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+        <WebView source={{ uri: url }} />
+      </View>
+    </GradientBackground>
+  );
 }
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});

@@ -21,7 +21,8 @@
     ```const response = await supabase.auth.verifyOtp(...);
        console.log(response); // ✅ Always log the full response```
 
-
+6. Axios post request Schema: `axios.post(url, { clientID, secret, grant_type, product_instance_id }, { headers: {...} })
+`
 
 #TODO:
 0. Put phone.jsx content into index.jsx in (auth) folder

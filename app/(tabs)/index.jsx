@@ -9,6 +9,10 @@ import { FlatList, StyleSheet, Text, TouchableOpacity, View, Button } from 'reac
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { WebView } from 'react-native-webview';
+
+const BACKEND_URL = 'http://192.168.31.76:3000';
+// const BACKEND_URL = 'http://localhost:3000';
 
 export default function HomeScreen() {
   const [expenses, setExpenses] = useState(initialExpenses);
@@ -87,11 +91,41 @@ export default function HomeScreen() {
     }).format(amount);
   };
   
+  const openwebview = async(phone) => { 
+    try{
+      console.log("trying sending to backend");
+      console.log(`${BACKEND_URL}/aa`);
+      const response = await fetch(`${BACKEND_URL}/aa`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // body: JSON.stringify({ phone: '9999999999' }),
+        body: JSON.stringify({ phone: '9315151857' }),
+      });
+      const data = await response.json();
+      console.log("data: ", data)
+      console.log(data.consentData.url);
+
+      if(data.consentData.url){
+        router.push({
+          pathname: '/(aa)/setu',
+          params: { url: data.consentData.url },
+        });
+      }
+
+
+    }catch(err){
+      console.error("ERROR IN OPENING WEBVIEW: ", err)
+    }
+  }
+
   return (
     <GradientBackground>
       <View style={[styles.container, { paddingBottom: insets.bottom }]}>
          <Button title="Go to Phone" onPress={() => router.push('/phone')} />
          <Button title="Go to Verify" onPress={() => router.push('/verify')} />
+         <Button title="setu" onPress={() => openwebview()} />
         <Animated.View 
           style={styles.header}
           entering={FadeIn.duration(600)}
