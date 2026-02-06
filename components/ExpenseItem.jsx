@@ -76,7 +76,7 @@ export default function ExpenseItem({ expense, onCategoryChange }) {
         </View>
         
         <View style={styles.rightSection}>
-          <Text style={styles.amount}>${expense.amount.toFixed(2)}</Text>
+          <Text style={styles.amount}>₹{expense.amount.toFixed(2)}</Text>
           <TouchableOpacity 
             style={styles.categoryButton}
             onPress={toggleDropdown}

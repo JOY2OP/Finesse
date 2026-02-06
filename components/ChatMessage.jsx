@@ -13,6 +13,7 @@ const AnimatedView = Animated.createAnimatedComponent(View);
 
 export default function ChatMessage({ message, isLast }) {
   const isBot = message.sender === 'bot';
+  const isError = message.isError;
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(20);
   
@@ -49,8 +50,16 @@ export default function ChatMessage({ message, isLast }) {
       ]}
       entering={isBot ? FadeInLeft.duration(400) : FadeInRight.duration(400)}
     >
-      <View style={[styles.bubble, isBot ? styles.botBubble : styles.userBubble]}>
-        <Text style={[styles.text, isBot ? styles.botText : styles.userText]}>
+      <View style={[
+        styles.bubble, 
+        isBot ? styles.botBubble : styles.userBubble,
+        isError && styles.errorBubble
+      ]}>
+        <Text style={[
+          styles.text, 
+          isBot ? styles.botText : styles.userText,
+          isError && styles.errorText
+        ]}>
           {message.text}
         </Text>
       </View>
@@ -83,6 +92,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderBottomRightRadius: 4,
   },
+  errorBubble: {
+    backgroundColor: `${colors.status.error}20`,
+    borderColor: colors.status.error,
+    borderWidth: 1,
+  },
   text: {
     fontSize: fontSizes.sm,
     lineHeight: 20,
@@ -92,6 +106,9 @@ const styles = StyleSheet.create({
   },
   userText: {
     color: '#FFFFFF',
+  },
+  errorText: {
+    color: colors.status.error,
   },
   timestamp: {
     fontSize: fontSizes.xs,
