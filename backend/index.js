@@ -74,6 +74,10 @@ app.post('/chat', async (req, res) => {
   }
 });
 
+app.get('/chat', (req,res) => {
+  res.json({ status: 'OK', message: 'Finesse /chat is running' });
+})
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
@@ -85,7 +89,7 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Endpoint not found' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Finesse Chat Backend running on port ${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
   console.log(`💬 Chat endpoint: http://localhost:${PORT}/chat`);

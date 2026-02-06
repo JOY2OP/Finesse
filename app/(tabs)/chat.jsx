@@ -26,7 +26,22 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const BACKEND_URL = 'http://192.168.31.76:3000';
+// Backend URL configuration
+// IMPORTANT: Update this based on your setup:
+// - Android Emulator: use 'http://10.0.2.2:3000'
+// - iOS Simulator: use 'http://localhost:3000'
+// - Physical Device (Expo Go): use your computer's IP (check with ipconfig)
+// - Web: use 'http://localhost:3000'
+
+const BACKEND_URLS = {
+  android: 'http://10.84.85.229:3000',   // Physical Android device - using your PC's IP
+  ios: 'http://152.58.122.26:3000',       // Physical iOS device - using your PC's IP
+  web: 'http://localhost:3000',          // Web browser
+};
+
+const BACKEND_URL = BACKEND_URLS[Platform.OS] || 'http://localhost:3000';
+
+console.log('🔗 Using backend URL:', BACKEND_URL, 'for platform:', Platform.OS);
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState(initialMessages);
