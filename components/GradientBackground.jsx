@@ -4,7 +4,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function GradientBackground({ children, style }) {
+export default function GradientBackground({ children, style = null }) {
   const insets = useSafeAreaInsets();
   
   return (

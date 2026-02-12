@@ -1,18 +1,21 @@
+import { TypedStorage } from '@/app/lib/storage';
 import ExpenseItem from '@/components/ExpenseItem';
 import GradientBackground from '@/components/GradientBackground';
-import { Storage, TypedStorage } from '@/app/lib/storage';
 import { initialExpenses } from '@/constants/mockData';
 import { colors, fontSizes, spacing } from '@/constants/theme';
+import { useRouter } from 'expo-router';
 import { Search as SearchIcon } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View, Button } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { WebView } from 'react-native-webview';
+const BACKEND_URLS = {
+  android: 'http://10.84.85.229:3000',
+  ios: 'http://152.58.122.26:3000',
+  web: 'http://localhost:3000',
+};
 
-const BACKEND_URL = 'http://192.168.31.76:3000';
-// const BACKEND_URL = 'http://localhost:3000';
+const BACKEND_URL = BACKEND_URLS[Platform.OS] || 'http://localhost:3000';
 
 export default function HomeScreen() {
   const [expenses, setExpenses] = useState(initialExpenses);
@@ -91,7 +94,7 @@ export default function HomeScreen() {
     }).format(amount);
   };
   
-  const openwebview = async(phone) => { 
+  const openwebview = async() => { 
     try{
       console.log("trying sending to backend");
       console.log(`${BACKEND_URL}/aa`);
@@ -123,9 +126,9 @@ export default function HomeScreen() {
   return (
     <GradientBackground>
       <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-         <Button title="Go to Phone" onPress={() => router.push('/phone')} />
+         {/* <Button title="Go to Phone" onPress={() => router.push('/phone')} />
          <Button title="Go to Verify" onPress={() => router.push('/verify')} />
-         <Button title="setu" onPress={() => openwebview()} />
+         <Button title="setu" onPress={() => openwebview()} /> */}
         <Animated.View 
           style={styles.header}
           entering={FadeIn.duration(600)}

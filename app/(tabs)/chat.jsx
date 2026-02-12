@@ -99,9 +99,9 @@ export default function ChatScreen() {
   }, [messages]);
 
   // Test backend connection on component mount
-  useEffect(() => {
-    testBackendConnection();
-  }, []);
+  // useEffect(() => {
+  //   testBackendConnection();
+  // }, []);
 
   const loadMessages = async () => {
     try {

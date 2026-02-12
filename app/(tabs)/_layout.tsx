@@ -1,6 +1,7 @@
 import { colors } from '@/constants/theme';
 import { Tabs } from 'expo-router';
-import { Chrome as Home, MessageCircle } from 'lucide-react-native';
+import { Chrome as Home, Speech } from 'lucide-react-native';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
@@ -28,6 +29,15 @@ export default function TabLayout() {
         },
       }}>
       <Tabs.Screen
+        name="coach"
+        options={{
+          title: 'Coach',
+          tabBarIcon: ({ color, size }) => (
+            <Speech size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
@@ -39,10 +49,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="chat"
         options={{
-          title: 'Chat',
-          tabBarIcon: ({ color, size }) => (
-            <MessageCircle size={size} color={color} />
-          ),
+          href: null, // This hides the tab from the tab bar
         }}
       />
     </Tabs>

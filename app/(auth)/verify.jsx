@@ -1,6 +1,6 @@
 import GradientBackground from '@/components/GradientBackground';
 import { colors, fontSizes, spacing } from '@/constants/theme';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, CircleCheck as CheckCircle, Shield } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -24,7 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // import { useLocalSearchParams } from 'expo-router';
-import {supabase} from '../lib/supabase'
+import { supabase } from '../lib/supabase';
 // import { useRouter } from 'expo-router';
 
 const BACKEND_URL = 'http://192.168.31.76:3000';
