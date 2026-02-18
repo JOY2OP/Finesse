@@ -21,10 +21,17 @@ export default function RankedCard({
       <View style={styles.rankBadge}>
         <Text style={styles.rankNumber}>#{rank}</Text>
       </View>
-      <Text style={[styles.categoryText, isCenter && styles.categoryTextCenter]}>
+      <Text 
+        style={[styles.categoryText, isCenter && styles.categoryTextCenter]}
+        numberOfLines={1}
+      >
         {category}
       </Text>
-      <Text style={[styles.amountText, isCenter && styles.amountTextCenter]}>
+      <Text 
+        style={[styles.amountText, isCenter && styles.amountTextCenter]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+      >
         {amount}
       </Text>
       <Text style={styles.labelText}>{label}</Text>
@@ -36,7 +43,7 @@ const styles = StyleSheet.create({
   rankedCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
+    padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -45,42 +52,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rankedCardCenter: {
-    paddingVertical: 24,
+    paddingVertical: 16,
     borderWidth: 2,
     borderColor: '#3B82F6',
   },
   rankBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   rankNumber: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#3B82F6',
   },
   categoryText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#6B7280',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   categoryTextCenter: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#111827',
   },
   amountText: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#111827',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   amountTextCenter: {
-    fontSize: 28,
+    fontSize: 24,
     color: '#EF4444',
   },
   labelText: {
