@@ -30,7 +30,7 @@ const memoryStorage = {
   },
 };
 
-export const supabase = supabaseUrl && supabaseAnonKey &&  Platform.OS !== 'web'
+export const supabase = (supabaseUrl && supabaseAnonKey)
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         storage: AsyncStorage,
@@ -39,9 +39,9 @@ export const supabase = supabaseUrl && supabaseAnonKey &&  Platform.OS !== 'web'
         detectSessionInUrl: false,
       },
     })
-  : console.log("client is null");
+  : null;
 
-if (Platform.OS !== "web") {
+if (supabase && Platform.OS !== "web") {
   AppState.addEventListener('change', (state) => {
     if (state === 'active') {
       supabase.auth.startAutoRefresh()

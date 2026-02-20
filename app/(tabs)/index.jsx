@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { supabase } from '../lib/supabase';
 
 export default function HomeScreen() {
   const [expenses, setExpenses] = useState(initialExpenses);
@@ -24,7 +25,17 @@ export default function HomeScreen() {
   const flatListRef = useRef(null);
   
   const router = useRouter();
-  
+
+  const logAuthUser = async () => {
+    console.log('START AUTH CHECK');
+    try {
+      const result = await supabase.auth.getUser();
+      console.log('FULL RESULT:', JSON.stringify(result, null, 2));
+    } catch (err) {
+      console.log('CATCH ERROR:', err);
+    }
+  };
+
   // Load expenses from storage on component mount
   useEffect(() => {
     loadExpenses();
@@ -128,6 +139,9 @@ export default function HomeScreen() {
           entering={FadeIn.duration(600)}
         >
           <Text style={styles.logo}>finesse</Text>
+          <TouchableOpacity onPress={logAuthUser}>
+  <SearchIcon size={20} color={colors.text.primary} />
+</TouchableOpacity>
           <TouchableOpacity style={styles.searchButton}>
             <SearchIcon size={20} color={colors.text.primary} />
           </TouchableOpacity>
