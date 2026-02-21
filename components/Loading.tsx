@@ -61,13 +61,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   track: {
-    height: 3,
-    backgroundColor: 'rgba(0,0,0,0.08)',
+    height: 5,
+    backgroundColor: 'rgba(126, 124, 124, 0.08)',
     borderRadius: 999,
     overflow: 'hidden',
   },
   pill: {
-    height: 3,
+    height: 5,
     backgroundColor: '#ffffff',
     borderRadius: 999,
   },
