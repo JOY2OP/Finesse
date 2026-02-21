@@ -77,29 +77,78 @@ export default function HomeScreen() {
     );
   }, []);
 
-  const handleAddExpense = () => {
+  const handleAddExpense = async () => {
+    console.log('=== ADD EXPENSE CLICKED ===');
+    console.log('newExpense:', newExpense);
+    
     if (!newExpense.amount || parseFloat(newExpense.amount) <= 0) {
       alert('Please enter a valid amount');
       return;
     }
 
-    const expense = {
-      id: Date.now().toString(),
-      description: newExpense.note || 'Manual Entry',
-      amount: parseFloat(newExpense.amount),
-      category: newExpense.category,
-      date: newExpense.date,
-      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-    };
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        alert('You must be logged in to add expenses');
+        return;
+      }
 
-    setExpenses(prevExpenses => [expense, ...prevExpenses]);
-    setModalVisible(false);
-    setNewExpense({
-      amount: '',
-      category: 'needs',
-      note: '',
-      date: new Date().toISOString().split('T')[0],
-    });
+      // Prepare transaction data
+      const transaction = {
+        user_id: user.id,
+        amount: parseFloat(newExpense.amount),
+        category: newExpense.category.charAt(0).toUpperCase() + newExpense.category.slice(1),
+        note: newExpense.note || null,
+        occured_at: new Date(newExpense.date).toISOString(),
+      };
+
+      console.log('Sending transaction to backend:', transaction);
+
+      // Send to backend (bypasses RLS)
+      // const BACKEND_URL = 'http://10.84.85.229:3000';
+      const BACKEND_URL = 'http://10.159.6.229:3000';
+      const response = await fetch(`${BACKEND_URL}/transactions/add`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(transaction),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error('Backend error:', result);
+        alert('Failed to add expense: ' + (result.error || 'Unknown error'));
+        return;
+      }
+
+      console.log('Transaction inserted:', result.data);
+
+      // Add to local state
+      const expense = {
+        id: result.data.id,
+        description: newExpense.note || 'Manual Entry',
+        amount: parseFloat(newExpense.amount),
+        category: newExpense.category,
+        date: newExpense.date,
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      };
+
+      setExpenses(prevExpenses => [expense, ...prevExpenses]);
+      setModalVisible(false);
+      setNewExpense({
+        amount: '',
+        category: 'needs',
+        note: '',
+        date: new Date().toISOString().split('T')[0],
+      });
+    } catch (err) {
+      console.error('Exception:', err);
+      alert('Failed to add expense');
+    }
   };
 
   if (isLoading) {
@@ -140,8 +189,8 @@ export default function HomeScreen() {
         >
           <Text style={styles.logo}>finesse</Text>
           <TouchableOpacity onPress={logAuthUser}>
-  <SearchIcon size={20} color={colors.text.primary} />
-</TouchableOpacity>
+            <SearchIcon size={20} color={colors.text.primary} />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.searchButton}>
             <SearchIcon size={20} color={colors.text.primary} />
           </TouchableOpacity>
