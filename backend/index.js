@@ -5,6 +5,7 @@ const OpenAI = require("openai");
 
 const authRoutes = require('./auth');
 const aaRoutes = require('./aa');
+const transactionRoutes = require('./transactions');
 
 require('dotenv').config();
 
@@ -22,6 +23,9 @@ app.use('/auth', authRoutes); //middleware
 
 // Setu routes
 app.use('/aa', aaRoutes); //middleware
+
+// Transaction routes
+app.use('/transactions', transactionRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
