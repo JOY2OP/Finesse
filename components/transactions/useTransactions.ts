@@ -1,0 +1,171 @@
+import { supabase } from '@/app/lib/supabase';
+import { useCallback, useEffect, useState } from 'react';
+
+interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  category: string | null;
+  date: string;
+  time?: string;
+}
+
+interface NewExpense {
+  amount: string;
+  category: 'needs' | 'wants' | 'investing';
+  note: string;
+  date: string;
+}
+
+const BACKEND_URL = 'http://10.159.6.229:3000';
+
+export function useTransactions() {
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadExpenses();
+  }, []);
+
+  const loadExpenses = async () => {
+    try {
+      // Check if supabase is initialized
+      if (!supabase) {
+        console.error('Supabase not initialized');
+        setIsLoading(false);
+        return;
+      }
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        console.log('No user logged in');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('Fetching transactions for user:', user.id);
+
+      // Fetch transactions from backend
+      const response = await fetch(`${BACKEND_URL}/transactions/${user.id}`);
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error('Backend error:', result);
+        setIsLoading(false);
+        return;
+      }
+
+      console.log(`Loaded ${result.data?.length || 0} transactions`);
+
+      // Transform to match Expense interface
+      const transformedExpenses: Expense[] = (result.data || []).map((transaction: any) => ({
+        id: transaction.id,
+        description: transaction.note || 'Transaction',
+        amount: transaction.amount,
+        category: transaction.category?.toLowerCase() || null,
+        date: new Date(transaction.occured_at).toISOString().split('T')[0],
+        time: new Date(transaction.occured_at).toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }),
+      }));
+
+      setExpenses(transformedExpenses);
+    } catch (error) {
+      console.error('Error loading expenses:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCategoryChange = useCallback((expenseId: string, newCategory: string) => {
+    setExpenses(prevExpenses =>
+      prevExpenses.map(expense =>
+        expense.id === expenseId ? { ...expense, category: newCategory } : expense
+      )
+    );
+  }, []);
+
+  const addExpense = async (newExpense: NewExpense): Promise<boolean> => {
+    console.log('=== ADD EXPENSE CLICKED ===');
+    console.log('newExpense:', newExpense);
+
+    if (!newExpense.amount || parseFloat(newExpense.amount) <= 0) {
+      alert('Please enter a valid amount');
+      return false;
+    }
+
+    try {
+      // Check if supabase is initialized
+      if (!supabase) {
+        alert('Supabase not initialized');
+        return false;
+      }
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        alert('You must be logged in to add expenses');
+        return false;
+      }
+
+      // Prepare transaction data
+      const transaction = {
+        user_id: user.id,
+        amount: parseFloat(newExpense.amount),
+        category: newExpense.category.charAt(0).toUpperCase() + newExpense.category.slice(1),
+        note: newExpense.note || null,
+        occured_at: new Date(newExpense.date).toISOString(),
+      };
+
+      console.log('Sending transaction to backend:', transaction);
+
+      // Send to backend (bypasses RLS)
+      const response = await fetch(`${BACKEND_URL}/transactions/add`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(transaction),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error('Backend error:', result);
+        alert('Failed to add expense: ' + (result.error || 'Unknown error'));
+        return false;
+      }
+
+      console.log('Transaction inserted:', result.data);
+
+      // Add to local state
+      const expense: Expense = {
+        id: result.data.id,
+        description: newExpense.note || 'Manual Entry',
+        amount: parseFloat(newExpense.amount),
+        category: newExpense.category,
+        date: newExpense.date,
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      };
+
+      setExpenses(prevExpenses => [expense, ...prevExpenses]);
+      return true;
+    } catch (err) {
+      console.error('Exception:', err);
+      alert('Failed to add expense');
+      return false;
+    }
+  };
+
+  return {
+    expenses,
+    isLoading,
+    handleCategoryChange,
+    addExpense,
+    refreshExpenses: loadExpenses,
+  };
+}
