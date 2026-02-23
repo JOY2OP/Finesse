@@ -75,4 +75,40 @@ router.post('/add', async (req, res) => {
   }
 });
 
+// Update transaction category and subcategory
+router.put('/update-category', async (req, res) => {
+  try {
+    const { transaction_id, category, subcategory } = req.body;
+
+    console.log('Updating category:', { transaction_id, category, subcategory });
+
+    if (!transaction_id || !category) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: transaction_id, category' 
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('transactions')
+      .update({ 
+        category,
+        subcategory: subcategory || null,
+      })
+      .eq('id', transaction_id)
+      .select();
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log('Category updated:', data);
+    res.json({ success: true, data: data[0] });
+
+  } catch (error) {
+    console.error('Update category error:', error);
+    res.status(500).json({ error: 'Failed to update category' });
+  }
+});
+
 module.exports = router;

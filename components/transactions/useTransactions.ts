@@ -6,6 +6,7 @@ interface Expense {
   description: string;
   amount: number;
   category: string | null;
+  subcategory?: string | null;
   date: string;
   time?: string;
 }
@@ -65,6 +66,7 @@ export function useTransactions() {
         description: transaction.note || 'Transaction',
         amount: transaction.amount,
         category: transaction.category?.toLowerCase() || null,
+        subcategory: transaction.subcategory || null,
         date: new Date(transaction.occured_at).toISOString().split('T')[0],
         time: new Date(transaction.occured_at).toLocaleTimeString('en-US', { 
           hour: '2-digit', 
@@ -80,12 +82,38 @@ export function useTransactions() {
     }
   };
 
-  const handleCategoryChange = useCallback((expenseId: string, newCategory: string) => {
+  const handleCategoryChange = useCallback(async (expenseId: string, newCategory: string, subcategory?: string) => {
+    // Update local state immediately
     setExpenses(prevExpenses =>
       prevExpenses.map(expense =>
-        expense.id === expenseId ? { ...expense, category: newCategory } : expense
+        expense.id === expenseId 
+          ? { ...expense, category: newCategory, subcategory: subcategory || null } 
+          : expense
       )
     );
+
+    // Update in backend
+    try {
+      const response = await fetch(`${BACKEND_URL}/transactions/update-category`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          transaction_id: expenseId,
+          category: newCategory.charAt(0).toUpperCase() + newCategory.slice(1),
+          subcategory: subcategory || null,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error('Failed to update category:', result);
+      }
+    } catch (error) {
+      console.error('Error updating category:', error);
+    }
   }, []);
 
   const addExpense = async (newExpense: NewExpense): Promise<boolean> => {

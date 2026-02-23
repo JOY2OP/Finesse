@@ -108,19 +108,21 @@ export default function HomeScreen() {
         
         <Text style={styles.sectionTitle}>Recent Expenses</Text>
         
-        <FlatList
-          ref={flatListRef}
-          data={expenses}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <ExpenseItem 
-              expense={item} 
-              onCategoryChange={handleCategoryChange}
-            />
-          )}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.expensesList}
-        />
+        <View style={styles.tableContainer}>
+          <FlatList
+            ref={flatListRef}
+            data={expenses}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <ExpenseItem 
+                expense={item} 
+                onCategoryChange={handleCategoryChange}
+              />
+            )}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.expensesList}
+          />
+        </View>
 
         <TouchableOpacity
           style={styles.floatingButton}
@@ -171,6 +173,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text.primary,
     marginBottom: spacing.md,
+  },
+  tableContainer: {
+    flex: 1,
+    backgroundColor: colors.background.card,
+    borderRadius: 16,
+    paddingHorizontal: spacing.md,
+    // overflow: 'hidden',
   },
   expensesList: {
     paddingBottom: spacing.xl + 60,
