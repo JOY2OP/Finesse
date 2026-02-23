@@ -1,6 +1,6 @@
 import { colors } from '@/constants/theme';
 import { Tabs } from 'expo-router';
-import { Chrome as Home, Speech } from 'lucide-react-native';
+import { House, Speech } from 'lucide-react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -42,7 +42,7 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => (
-            <Home size={size} color={color} />
+            <House size={size} color={color} />
           ),
         }}
       />

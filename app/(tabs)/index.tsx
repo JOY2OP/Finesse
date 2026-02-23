@@ -5,12 +5,13 @@ import AddTransactionModal from '@/components/transactions/AddTransactionModal';
 import TransactionSummary from '@/components/transactions/TransactionSummary';
 import { useTransactions } from '@/components/transactions/useTransactions';
 import { colors, fontSizes, spacing } from '@/constants/theme';
+import { useRouter } from 'expo-router';
 import { Plus, Search as SearchIcon } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { supabase } from '../lib/supabase';
 export default function HomeScreen() {
   const { expenses, isLoading, handleCategoryChange, addExpense } = useTransactions();
   const [modalVisible, setModalVisible] = useState(false);
@@ -61,6 +62,19 @@ export default function HomeScreen() {
     return acc;
   }, {} as Record<string, number>);
 
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+      router.replace('/(auth)/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   return (
     <GradientBackground>
       <View style={[styles.container, { paddingBottom: insets.bottom }]}>
@@ -75,6 +89,22 @@ export default function HomeScreen() {
         </Animated.View>
         
         <TransactionSummary expenseTotals={expenseTotals} />
+        
+        <View style={styles.testButtons}>
+          <TouchableOpacity
+            onPress={() => router.push('/(onboarding)/preferences')}
+            style={styles.goButton}
+          >
+            <Text style={styles.goButtonText}>Go</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            onPress={handleLogout}
+            style={styles.logoutButton}
+          >
+            <Text style={styles.logoutButtonText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
         
         <Text style={styles.sectionTitle}>Recent Expenses</Text>
         
@@ -168,5 +198,34 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  testButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  goButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#0df3aaff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  goButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  logoutButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#ef4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutButtonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });

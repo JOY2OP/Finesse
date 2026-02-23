@@ -24,6 +24,33 @@ export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  const checkAndRedirect = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        router.replace('/(auth)/login');
+        return;
+      }
+
+      // Check if user has preferences
+      const response = await fetch(`http://10.159.6.229:3000/preferences/${user.id}`);
+      const result = await response.json();
+
+      if (result.success && result.exists) {
+        // User has preferences, go to main app
+        router.replace('/(tabs)');
+      } else {
+        // New user, go to preferences
+        router.replace('/(onboarding)/preferences');
+      }
+    } catch (error) {
+      console.error('Error checking preferences:', error);
+      // On error, go to preferences to be safe
+      router.replace('/(onboarding)/preferences');
+    }
+  };
+
   const handleGoogleLogin = async () => {
     try {
       setIsLoading(true);
@@ -74,7 +101,9 @@ export default function LoginScreen() {
             console.log('Using PKCE flow with code');
             const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
             if (exchangeError) throw exchangeError;
-            router.replace('/(tabs)');
+            
+            // Check if user has completed preferences
+            await checkAndRedirect();
           } else if (access_token) {
             console.log('Using implicit flow with tokens');
             const { error: sessionError } = await supabase.auth.setSession({
@@ -82,7 +111,9 @@ export default function LoginScreen() {
               refresh_token,
             });
             if (sessionError) throw sessionError;
-            router.replace('/(tabs)');
+            
+            // Check if user has completed preferences
+            await checkAndRedirect();
           } else {
             throw new Error('No authentication tokens received');
           }
