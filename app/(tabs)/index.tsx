@@ -180,9 +180,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: spacing.md,
     // overflow: 'hidden',
+
   },
   expensesList: {
-    paddingBottom: spacing.xl + 60,
+    // paddingBottom: spacing.xl + 60,
   },
   loadingContainer: {
     justifyContent: 'center',

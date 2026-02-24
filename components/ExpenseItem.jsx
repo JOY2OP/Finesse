@@ -240,6 +240,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
     marginHorizontal: -spacing.md,
     paddingHorizontal: spacing.md,
+    // overflow:'scroll',
   },
   mainContent: {
     flexDirection: 'row',
@@ -294,6 +295,7 @@ const styles = StyleSheet.create({
     right: spacing.md,
     zIndex: 1000,
     overflow: 'hidden',
+    // overflow:'scroll',
   },
   dropdownContent: {
     backgroundColor: colors.background.input,
@@ -349,7 +351,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   subcategoryTag: {
-    marginTop: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
   },
   subcategoryText: {
     fontSize: fontSizes.xs,

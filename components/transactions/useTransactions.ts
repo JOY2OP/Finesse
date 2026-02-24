@@ -20,6 +20,13 @@ interface NewExpense {
 
 const BACKEND_URL = 'http://10.159.6.229:3000';
 
+// Log backend URL for debugging
+if (typeof window !== 'undefined') {
+  console.log('🔗 Using backend URL:', BACKEND_URL, 'for platform: web');
+} else {
+  console.log('🔗 Using backend URL:', BACKEND_URL, 'for platform: native');
+}
+
 export function useTransactions() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,6 +49,61 @@ export function useTransactions() {
 
       if (!user) {
         console.log('No user logged in');
+        setIsLoading(false);
+        return;
+      }
+
+      // Use mock data for web debug user
+      if (user.id === 'web-debug-user') {
+        console.log('Using mock data for web debug');
+        const mockExpenses: Expense[] = [
+          {
+            id: '1',
+            description: 'Grocery Shopping',
+            amount: 2500,
+            category: 'needs',
+            subcategory: 'groceries',
+            date: new Date().toISOString().split('T')[0],
+            time: '10:30 AM',
+          },
+          {
+            id: '2',
+            description: 'Netflix Subscription',
+            amount: 649,
+            category: 'wants',
+            subcategory: 'streaming',
+            date: new Date().toISOString().split('T')[0],
+            time: '09:15 AM',
+          },
+          {
+            id: '3',
+            description: 'SIP Investment',
+            amount: 5000,
+            category: 'investing',
+            subcategory: 'sip',
+            date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+            time: '08:00 AM',
+          },
+          {
+            id: '4',
+            description: 'Uber Ride',
+            amount: 350,
+            category: 'needs',
+            subcategory: 'transport',
+            date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+            time: '06:45 PM',
+          },
+          {
+            id: '5',
+            description: 'Zomato Order',
+            amount: 450,
+            category: 'wants',
+            subcategory: 'food_delivery',
+            date: new Date(Date.now() - 172800000).toISOString().split('T')[0],
+            time: '08:30 PM',
+          },
+        ];
+        setExpenses(mockExpenses);
         setIsLoading(false);
         return;
       }
