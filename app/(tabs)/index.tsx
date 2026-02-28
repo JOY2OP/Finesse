@@ -75,6 +75,16 @@ export default function HomeScreen() {
     }
   };
 
+  const handlegemini = async ()=>{
+    try {
+      const response = await fetch('http://10.159.6.229:3000/ai/lastMonth');
+      const data = await response.json();
+      console.log('AI Response:', data);
+    } catch (error) {
+      console.error('AI endpoint error:', error);
+    }
+  }
+
   return (
     <GradientBackground>
       <View style={[styles.container, { paddingBottom: insets.bottom }]}>
@@ -103,6 +113,13 @@ export default function HomeScreen() {
             style={styles.logoutButton}
           >
             <Text style={styles.logoutButtonText}>Logout</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handlegemini}
+            // style={styles.logoutButton}
+          >
+            <Text>geminiiiiiiiiiiiiiiiiiiiiiiii</Text>
           </TouchableOpacity>
         </View>
         
