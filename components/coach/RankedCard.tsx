@@ -6,6 +6,7 @@ type RankedCardProps = {
   category: string;
   amount: string;
   label: string;
+  icon?: string;
   isCenter?: boolean;
 };
 
@@ -14,85 +15,176 @@ export default function RankedCard({
   category,
   amount,
   label,
+  icon,
   isCenter,
 }: RankedCardProps) {
+  const getIconEmoji = (cat: string) => {
+    const lowerCat = cat.toLowerCase();
+    if (lowerCat.includes('deposit') || lowerCat.includes('saving')) return '💰';
+    if (lowerCat.includes('grocer')) return '🛒';
+    if (lowerCat.includes('real estate') || lowerCat.includes('rent')) return '🏢';
+    if (lowerCat.includes('food')) return '🍔';
+    if (lowerCat.includes('transport')) return '🚗';
+    return '📊';
+  };
+
   return (
-    <View style={[styles.rankedCard, isCenter && styles.rankedCardCenter]}>
-      <View style={styles.rankBadge}>
-        <Text style={styles.rankNumber}>#{rank}</Text>
+    <View style={[
+      styles.card,
+      isCenter && styles.cardCenter,
+      rank === 1 && styles.cardFirst
+    ]}>
+      <View style={styles.cardContent}>
+        <View style={[styles.iconContainer, isCenter && styles.iconContainerLarge]}>
+          <Text style={[styles.iconText, isCenter && styles.iconTextLarge]}>
+            {icon || getIconEmoji(category)}
+          </Text>
+        </View>
+        
+        <View style={styles.infoContainer}>
+          <View style={styles.headerRow}>
+            <View style={[styles.rankBadge, rank === 1 && styles.rankBadgeFirst]}>
+              <Text style={[styles.rankText, rank === 1 && styles.rankTextFirst]}>#{rank}</Text>
+            </View>
+            <Text style={[styles.categoryText, isCenter && styles.categoryTextLarge]} numberOfLines={1}>
+              {category.toUpperCase()}
+            </Text>
+          </View>
+          <Text
+            style={[styles.amountText, isCenter && styles.amountTextLarge]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
+            {amount}
+          </Text>
+        </View>
+
+        {rank === 1 && (
+          <View style={styles.labelBadge}>
+            <Text style={styles.labelText} numberOfLines={1}>{label.toUpperCase()}</Text>
+          </View>
+        )}
       </View>
-      <Text 
-        style={[styles.categoryText, isCenter && styles.categoryTextCenter]}
-        numberOfLines={1}
-      >
-        {category}
-      </Text>
-      <Text 
-        style={[styles.amountText, isCenter && styles.amountTextCenter]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-      >
-        {amount}
-      </Text>
-      <Text style={styles.labelText}>{label}</Text>
+      
+      {rank !== 1 && label ? (
+        <Text style={styles.subLabel} numberOfLines={1}>{label}</Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  rankedCard: {
+  card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: 20,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  cardCenter: {
+    padding: 16,
+  },
+  cardFirst: {
+    borderColor: '#DBEAFE',
+    borderWidth: 1,
+  },
+  cardContent: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  rankedCardCenter: {
-    paddingVertical: 16,
-    borderWidth: 2,
-    borderColor: '#3B82F6',
-  },
-  rankBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#EEF2FF',
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    flexShrink: 0,
   },
-  rankNumber: {
-    fontSize: 12,
+  iconContainerLarge: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#EFF6FF',
+  },
+  iconText: {
+    fontSize: 18,
+  },
+  iconTextLarge: {
+    fontSize: 24,
+  },
+  infoContainer: {
+    flex: 1,
+    minWidth: 0,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  rankBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    flexShrink: 0,
+  },
+  rankBadgeFirst: {
+    backgroundColor: '#0052FF',
+  },
+  rankText: {
+    fontSize: 10,
     fontWeight: '700',
-    color: '#3B82F6',
+    color: '#64748B',
+  },
+  rankTextFirst: {
+    color: '#FFFFFF',
   },
   categoryText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: 6,
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#94A3B8',
+    letterSpacing: 0.5,
+    flexShrink: 1,
   },
-  categoryTextCenter: {
-    fontSize: 15,
-    color: '#111827',
+  categoryTextLarge: {
+    fontSize: 10,
   },
   amountText: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: '700',
-    color: '#111827',
-    marginBottom: 6,
+    color: '#0F172A',
   },
-  amountTextCenter: {
+  amountTextLarge: {
     fontSize: 24,
-    color: '#EF4444',
+  },
+  labelBadge: {
+    backgroundColor: '#DBEAFE',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    flexShrink: 0,
+    alignSelf: 'flex-start',
   },
   labelText: {
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
+    fontSize: 6,
+    fontWeight: '700',
+    color: '#0052FF',
+    letterSpacing: 0.3,
+  },
+  subLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#94A3B8',
+    marginTop: 6,
   },
 });

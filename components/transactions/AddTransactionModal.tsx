@@ -18,9 +18,9 @@ interface AddTransactionModalProps {
 }
 
 const CATEGORY_COLORS = {
-  needs:     { active: '#E8643A', bg: 'rgba(232,100,58,0.12)',     border: 'rgba(232,100,58,0.35)' },
-  wants:     { active: '#7C6FCD', bg: 'rgba(124,111,205,0.12)',    border: 'rgba(124,111,205,0.35)' },
-  investing: { active: '#3A9E7E', bg: 'rgba(58,158,126,0.12)',     border: 'rgba(58,158,126,0.35)' },
+  needs:     { active: '#2563EB', bg: '#DBEAFE', border: '#93C5FD' },
+  wants:     { active: '#10B981', bg: '#D1FAE5', border: '#6EE7B7' },
+  investing: { active: '#9333EA', bg: '#F3E8FF', border: '#D8B4FE' },
 };
 
 export default function AddTransactionModal({
@@ -39,13 +39,12 @@ export default function AddTransactionModal({
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-
           <View style={styles.handle} />
 
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Add Transaction</Text>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <X size={18} color="#9CA3AF" />
+              <X size={18} color="#64748B" />
             </TouchableOpacity>
           </View>
 
@@ -54,7 +53,7 @@ export default function AddTransactionModal({
             <TextInput
               style={styles.input}
               placeholder="0.00"
-              placeholderTextColor="#4B5563"
+              placeholderTextColor="#94A3B8"
               keyboardType="numeric"
               value={newExpense.amount}
               onChangeText={(text) => onExpenseChange({ ...newExpense, amount: text })}
@@ -98,7 +97,7 @@ export default function AddTransactionModal({
             <TextInput
               style={styles.input}
               placeholder="Grocery shopping"
-              placeholderTextColor="#4B5563"
+              placeholderTextColor="#94A3B8"
               value={newExpense.note}
               onChangeText={(text) => onExpenseChange({ ...newExpense, note: text })}
             />
@@ -109,7 +108,7 @@ export default function AddTransactionModal({
             <TextInput
               style={styles.input}
               placeholder="YYYY-MM-DD"
-              placeholderTextColor="#4B5563"
+              placeholderTextColor="#94A3B8"
               value={newExpense.date}
               onChangeText={(text) => onExpenseChange({ ...newExpense, date: text })}
             />
@@ -118,7 +117,6 @@ export default function AddTransactionModal({
           <TouchableOpacity style={styles.addButton} onPress={onSubmit} activeOpacity={0.85}>
             <Text style={styles.addButtonText}>Add Expense</Text>
           </TouchableOpacity>
-
         </View>
       </View>
     </Modal>
@@ -128,24 +126,20 @@ export default function AddTransactionModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#161B27',
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: spacing.lg,
     paddingBottom: spacing.xl,
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
   },
   handle: {
     width: 36,
     height: 4,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: '#E2E8F0',
     borderRadius: 999,
     alignSelf: 'center',
     marginBottom: spacing.lg,
@@ -159,11 +153,11 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: fontSizes.xl,
     fontWeight: '700',
-    color: '#F9FAFB',
+    color: '#0F172A',
     letterSpacing: -0.3,
   },
   closeButton: {
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: '#F1F5F9',
     borderRadius: 999,
     padding: 6,
   },
@@ -173,22 +167,22 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: fontSizes.sm,
     fontWeight: '600',
-    color: '#b0b0b0ff',
+    color: '#475569',
     marginBottom: spacing.xs,
     letterSpacing: 0.2,
   },
   optional: {
     fontWeight: '400',
-    color: '#6B7280',
+    color: '#94A3B8',
   },
   input: {
-    backgroundColor: '#1F2637',
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
     padding: spacing.md,
     fontSize: fontSizes.md,
-    color: '#F9FAFB',
+    color: '#0F172A',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: '#E2E8F0',
   },
   categoryButtons: {
     flexDirection: 'row',
@@ -207,12 +201,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
   addButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#2B6CEE',
     borderRadius: 14,
     paddingVertical: spacing.md,
     alignItems: 'center',
     marginTop: spacing.md,
-    shadowColor: '#3B82F6',
+    shadowColor: '#2B6CEE',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
