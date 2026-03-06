@@ -72,6 +72,7 @@ const styles = StyleSheet.create({
   backgroundIconText: {
     fontSize: 80,
     transform: [{ scale: 1.5 }],
+    opacity:0.4,
   },
   contentContainer: {
     position: 'relative',

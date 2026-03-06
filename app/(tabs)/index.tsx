@@ -74,10 +74,25 @@ export default function HomeScreen() {
 
   // Group expenses by date
   const groupedExpenses = expenses.reduce((acc, expense) => {
+    // Skip expenses with invalid dates
+    if (!expense.date) return acc;
+    
     const date = new Date(expense.date);
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date for expense:', expense);
+      return acc;
+    }
+    
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
+    
+    const expenseDate = new Date(date);
+    expenseDate.setHours(0, 0, 0, 0);
 
     const monthShort = date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
     const day = date.getDate();
@@ -85,15 +100,16 @@ export default function HomeScreen() {
 
     let groupKey: string;
     let displayTitle: string;
-    if (date.toDateString() === today.toDateString()) {
+    
+    if (expenseDate.getTime() === today.getTime()) {
       groupKey = expense.date;
-      displayTitle = `TODAY, ${monthShort} ${day} '${year}`;
-    } else if (date.toDateString() === yesterday.toDateString()) {
+      displayTitle = `TODAY, ${monthShort} ${day}`;
+    } else if (expenseDate.getTime() === yesterday.getTime()) {
       groupKey = expense.date;
-      displayTitle = `YESTERDAY, ${monthShort} ${day} '${year}`;
+      displayTitle = `YESTERDAY, ${monthShort} ${day}`;
     } else {
       groupKey = expense.date;
-      displayTitle = `${monthShort} ${day} '${year}`;
+      displayTitle = `${monthShort} ${day}, ${date.getFullYear()}`;
     }
 
     if (!acc[groupKey]) {
@@ -120,7 +136,7 @@ export default function HomeScreen() {
 
   return (
     <GradientBackground>
-      <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+      <View style={styles.container}>
         {/* Header */}
         <Animated.View 
           style={styles.header}
@@ -137,7 +153,7 @@ export default function HomeScreen() {
         
         <ScrollView 
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 50 }]}
           showsVerticalScrollIndicator={false}
         >
           {/* Transaction Summary */}
@@ -166,7 +182,7 @@ export default function HomeScreen() {
 
         {/* Floating Add Button */}
         <TouchableOpacity
-          style={styles.floatingButton}
+          style={[styles.floatingButton, { bottom: insets.bottom }]}
           onPress={() => setModalVisible(true)}
           activeOpacity={0.8}
         >
@@ -194,7 +210,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 50,
+    paddingBottom: 0,
   },
   header: {
     flexDirection: 'row',
@@ -243,7 +259,7 @@ const styles = StyleSheet.create({
   floatingButton: {
     position: 'absolute',
     right: 24,
-    bottom: 20,
+    // bottom: 200,
     width: 56,
     height: 56,
     borderRadius: 28,
