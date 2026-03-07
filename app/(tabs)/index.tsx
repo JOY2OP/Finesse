@@ -16,14 +16,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 type Category = 'needs' | 'wants' | 'investing';
 
 export default function HomeScreen() {
-  const { expenses, isLoading, handleCategoryChange, addExpense } = useTransactions();
+  const { expenses, isLoading, handleCategoryChange, addExpense, updateExpense } = useTransactions();
   const [modalVisible, setModalVisible] = useState(false);
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<Category[]>(['needs', 'wants', 'investing']);
   const [newExpense, setNewExpense] = useState<{
     amount: string;
     category: 'needs' | 'wants' | 'investing';
     note: string;
     date: string;
+    subcategory?: string;
   }>({
     amount: '',
     category: 'needs',
@@ -35,14 +38,41 @@ export default function HomeScreen() {
   const handleAddExpense = async () => {
     const success = await addExpense(newExpense);
     if (success) {
-      setModalVisible(false);
-      setNewExpense({
-        amount: '',
-        category: 'needs',
-        note: '',
-        date: new Date().toISOString().split('T')[0],
-      });
+      closeModal();
     }
+  };
+
+  const handleEditTransaction = (transaction: { id: string; description: string; category: string; subcategory?: string; amount: number; date: string }) => {
+    setNewExpense({
+      amount: String(transaction.amount),
+      category: (transaction.category as Category) || 'needs',
+      note: transaction.description || '',
+      date: transaction.date,
+      subcategory: transaction.subcategory,
+    });
+    setEditingTransactionId(transaction.id);
+    setModalMode('edit');
+    setModalVisible(true);
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editingTransactionId) return;
+    const success = await updateExpense(editingTransactionId, newExpense);
+    if (success) {
+      closeModal();
+    }
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setModalMode('add');
+    setEditingTransactionId(null);
+    setNewExpense({
+      amount: '',
+      category: 'needs',
+      note: '',
+      date: new Date().toISOString().split('T')[0],
+    });
   };
 
   const handleToggleCategory = (category: Category) => {
@@ -175,6 +205,7 @@ export default function HomeScreen() {
                 transactions={group.transactions}
                 totalAmount={group.total}
                 onCategoryChange={handleCategoryChange}
+                onEditTransaction={handleEditTransaction}
               />
             ))}
           </View>
@@ -183,19 +214,23 @@ export default function HomeScreen() {
         {/* Floating Add Button */}
         <TouchableOpacity
           style={[styles.floatingButton, { bottom: insets.bottom }]}
-          onPress={() => setModalVisible(true)}
+          onPress={() => {
+            setModalMode('add');
+            setModalVisible(true);
+          }}
           activeOpacity={0.8}
         >
           <Plus size={28} color="#FFFFFF" />
         </TouchableOpacity>
 
-        {/* Add Transaction Modal */}
+        {/* Add/Edit Transaction Modal */}
         <AddTransactionModal
           visible={modalVisible}
           newExpense={newExpense}
-          onClose={() => setModalVisible(false)}
+          onClose={closeModal}
           onExpenseChange={setNewExpense}
-          onSubmit={handleAddExpense}
+          onSubmit={modalMode === 'edit' ? handleEditSubmit : handleAddExpense}
+          mode={modalMode}
         />
       </View>
     </GradientBackground>

@@ -1,12 +1,12 @@
-import { fontSizes, spacing } from '@/constants/theme';
-import { X } from 'lucide-react-native';
-import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Modal, PanResponder, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface NewExpense {
   amount: string;
   category: 'needs' | 'wants' | 'investing';
   note: string;
   date: string;
+  subcategory?: string;
 }
 
 interface AddTransactionModalProps {
@@ -15,12 +15,44 @@ interface AddTransactionModalProps {
   onClose: () => void;
   onExpenseChange: (expense: NewExpense) => void;
   onSubmit: () => void;
+  mode?: 'add' | 'edit';
 }
 
-const CATEGORY_COLORS = {
-  needs:     { active: '#2563EB', bg: '#DBEAFE', border: '#93C5FD' },
-  wants:     { active: '#10B981', bg: '#D1FAE5', border: '#6EE7B7' },
-  investing: { active: '#9333EA', bg: '#F3E8FF', border: '#D8B4FE' },
+const SUBCATEGORIES = {
+  needs: [
+    { id: 'rent', label: 'Rent', emoji: '🏠' },
+    { id: 'groceries', label: 'Groceries', emoji: '🛒' },
+    { id: 'utilities', label: 'Utilities', emoji: '💡' },
+    { id: 'insurance', label: 'Insurance', emoji: '🛡️' },
+    { id: 'healthcare', label: 'Health', emoji: '⚕️' },
+    { id: 'transport', label: 'Transit', emoji: '🚗' },
+    { id: 'internet_phone', label: 'Internet', emoji: '📱' },
+    { id: 'fuel', label: 'Fuel', emoji: '⛽' },
+  ],
+  wants: [
+    { id: 'food_delivery', label: 'Food Delivery', emoji: '🛵' },
+    { id: 'dining_out', label: 'Dining Out', emoji: '🍽️' },
+    { id: 'movies', label: 'Movies', emoji: '🎬' },
+    { id: 'streaming', label: 'Streaming', emoji: '📺' },
+    { id: 'shopping', label: 'Shopping', emoji: '🛍️' },
+    { id: 'travel', label: 'Travel', emoji: '✈️' },
+    { id: 'fitness', label: 'Fitness', emoji: '💪' },
+    { id: 'gaming', label: 'Gaming', emoji: '🎮' },
+    { id: 'beauty_care', label: 'Beauty & Care', emoji: '💅' },
+    { id: 'concerts_events', label: 'Concerts & Events', emoji: '🎵' },
+    { id: 'gifts', label: 'Gifts', emoji: '🎁' },
+    { id: 'hobbies', label: 'Hobbies', emoji: '🎨' },
+  ],
+  investing: [
+    { id: 'mutual_funds', label: 'Mutual Funds', emoji: '📊' },
+    { id: 'stocks', label: 'Stocks', emoji: '📈' },
+    { id: 'sip', label: 'SIP', emoji: '💰' },
+    { id: 'crypto', label: 'Crypto', emoji: '₿' },
+    { id: 'gold', label: 'Gold', emoji: '🪙' },
+    { id: 'fixed_deposit', label: 'Fixed Deposit', emoji: '🏦' },
+    { id: 'real_estate', label: 'Real Estate', emoji: '🏢' },
+    { id: 'nps_ppf', label: 'NPS/PPF', emoji: '📋' },
+  ],
 };
 
 export default function AddTransactionModal({
@@ -29,7 +61,40 @@ export default function AddTransactionModal({
   onClose,
   onExpenseChange,
   onSubmit,
+  mode = 'add',
 }: AddTransactionModalProps) {
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      setSelectedSubcategory(newExpense.subcategory ?? null);
+    }
+  }, [visible]);
+
+  const handleSubcategorySelect = (subcategoryId: string) => {
+    setSelectedSubcategory(subcategoryId);
+    onExpenseChange({ ...newExpense, subcategory: subcategoryId });
+  };
+
+  const handleConfirm = () => {
+    onSubmit();
+  };
+
+  const currentSubcategories = SUBCATEGORIES[newExpense.category];
+
+  // Pan responder for swipe down gesture
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (_, gestureState) => {
+      return gestureState.dy > 5;
+    },
+    onPanResponderRelease: (_, gestureState) => {
+      if (gestureState.dy > 50) {
+        onClose();
+      }
+    },
+  });
+
   return (
     <Modal
       animationType="slide"
@@ -38,52 +103,70 @@ export default function AddTransactionModal({
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
+        <TouchableOpacity 
+          style={styles.backdrop} 
+          activeOpacity={1} 
+          onPress={onClose}
+        />
         <View style={styles.modalContent}>
-          <View style={styles.handle} />
+          <View {...panResponder.panHandlers} style={styles.handleContainer}>
+            <View style={styles.handle} />
+          </View>
 
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Add Transaction</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <X size={18} color="#64748B" />
-            </TouchableOpacity>
+            <View>
+              <Text style={styles.modalTitle}>Choose Category</Text>
+              <Text style={styles.modalSubtitle}>Classify this transaction to optimize your AI insights.</Text>
+            </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Amount</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0.00"
-              placeholderTextColor="#94A3B8"
-              keyboardType="numeric"
-              value={newExpense.amount}
-              onChangeText={(text) => onExpenseChange({ ...newExpense, amount: text })}
-            />
+          {/* Amount and Date Row */}
+          <View style={styles.topInputs}>
+            <View style={styles.amountContainer}>
+              <Text style={styles.currencySymbol}>₹</Text>
+              <TextInput
+                style={styles.amountInput}
+                placeholder="0.00"
+                placeholderTextColor="#CBD5E1"
+                keyboardType="numeric"
+                value={newExpense.amount}
+                onChangeText={(text) => onExpenseChange({ ...newExpense, amount: text })}
+              />
+            </View>
+
+            <View style={styles.dateRow}>
+              <TextInput
+                style={styles.noteInput}
+                placeholder="Note (optional)"
+                placeholderTextColor="#94A3B8"
+                value={newExpense.note}
+                onChangeText={(text) => onExpenseChange({ ...newExpense, note: text })}
+              />
+              <TextInput
+                style={styles.dateInput}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor="#94A3B8"
+                value={newExpense.date}
+                onChangeText={(text) => onExpenseChange({ ...newExpense, date: text })}
+              />
+            </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Category</Text>
-            <View style={styles.categoryButtons}>
+          {/* Category Tabs */}
+          <View style={styles.categoryTabsContainer}>
+            <View style={styles.categoryTabs}>
               {(['needs', 'wants', 'investing'] as const).map((cat) => {
-                const c = CATEGORY_COLORS[cat];
                 const isActive = newExpense.category === cat;
                 return (
                   <TouchableOpacity
                     key={cat}
-                    style={[
-                      styles.categoryButton,
-                      {
-                        backgroundColor: isActive ? c.active : c.bg,
-                        borderColor: isActive ? c.active : c.border,
-                      },
-                    ]}
-                    onPress={() => onExpenseChange({ ...newExpense, category: cat })}
+                    style={[styles.categoryTab, isActive && styles.categoryTabActive]}
+                    onPress={() => {
+                      onExpenseChange({ ...newExpense, category: cat, subcategory: undefined });
+                      setSelectedSubcategory(null);
+                    }}
                   >
-                    <Text
-                      style={[
-                        styles.categoryButtonText,
-                        { color: isActive ? '#FFFFFF' : c.active },
-                      ]}
-                    >
+                    <Text style={[styles.categoryTabText, isActive && styles.categoryTabTextActive]}>
                       {cat.charAt(0).toUpperCase() + cat.slice(1)}
                     </Text>
                   </TouchableOpacity>
@@ -92,31 +175,58 @@ export default function AddTransactionModal({
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Note <Text style={styles.optional}>(optional)</Text></Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Grocery shopping"
-              placeholderTextColor="#94A3B8"
-              value={newExpense.note}
-              onChangeText={(text) => onExpenseChange({ ...newExpense, note: text })}
-            />
-          </View>
+          {/* Subcategories Grid */}
+          <ScrollView 
+            style={styles.subcategoriesScroll}
+            contentContainerStyle={styles.subcategoriesContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.subcategoriesGrid}>
+              {currentSubcategories.map((subcat) => {
+                const isSelected = selectedSubcategory === subcat.id;
+                return (
+                  <TouchableOpacity
+                    key={subcat.id}
+                    style={styles.subcategoryItem}
+                    onPress={() => handleSubcategorySelect(subcat.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[
+                      styles.subcategoryIcon,
+                      isSelected && styles.subcategoryIconSelected
+                    ]}>
+                      <Text style={styles.subcategoryEmoji}>{subcat.emoji}</Text>
+                    </View>
+                    <Text style={[
+                      styles.subcategoryLabel,
+                      isSelected && styles.subcategoryLabelSelected
+                    ]}>
+                      {subcat.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              
+              {/* Add New Button - Add subcategory*/}
+              {/* <TouchableOpacity style={styles.subcategoryItem} activeOpacity={0.7}>
+                <View style={styles.subcategoryIcon}>
+                  <Text style={styles.addIcon}>+</Text>
+                </View>
+                <Text style={styles.subcategoryLabelAdd}>Add New</Text>
+              </TouchableOpacity> */}
+            </View>
+          </ScrollView>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Date</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#94A3B8"
-              value={newExpense.date}
-              onChangeText={(text) => onExpenseChange({ ...newExpense, date: text })}
-            />
+          {/* Confirm Button */}
+          <View style={styles.confirmButtonContainer}>
+            <TouchableOpacity 
+              style={styles.confirmButton} 
+              onPress={handleConfirm}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.confirmButtonText}>{mode === 'edit' ? 'Edit Transaction' : 'Add Transaction'}</Text>
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity style={styles.addButton} onPress={onSubmit} activeOpacity={0.85}>
-            <Text style={styles.addButtonText}>Add Expense</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -126,94 +236,221 @@ export default function AddTransactionModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: spacing.lg,
-    paddingBottom: spacing.xl,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    height: '92%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 20,
+    flexDirection: 'column',
+  },
+  handleContainer: {
+    paddingVertical: 16,
+    alignItems: 'center',
   },
   handle: {
-    width: 36,
-    height: 4,
+    width: 48,
+    height: 6,
     backgroundColor: '#E2E8F0',
     borderRadius: 999,
-    alignSelf: 'center',
-    marginBottom: spacing.lg,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
+    paddingHorizontal: 24,
+    paddingBottom: 8,
   },
   modalTitle: {
-    fontSize: fontSizes.xl,
+    fontSize: 20,
     fontWeight: '700',
     color: '#0F172A',
-    letterSpacing: -0.3,
   },
-  closeButton: {
-    backgroundColor: '#F1F5F9',
-    borderRadius: 999,
-    padding: 6,
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 4,
   },
-  inputGroup: {
-    marginBottom: spacing.md,
+  topInputs: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    gap: 12,
   },
-  inputLabel: {
-    fontSize: fontSizes.sm,
-    fontWeight: '600',
-    color: '#475569',
-    marginBottom: spacing.xs,
-    letterSpacing: 0.2,
+  amountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
   },
-  optional: {
-    fontWeight: '400',
+  currencySymbol: {
+    fontSize: 28,
+    fontWeight: '700',
     color: '#94A3B8',
+    marginRight: 8,
   },
-  input: {
+  amountInput: {
+    flex: 1,
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#0F172A',
+    paddingVertical: 16,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  noteInput: {
+    flex: 1,
     backgroundColor: '#F8FAFC',
     borderRadius: 12,
-    padding: spacing.md,
-    fontSize: fontSizes.md,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    fontSize: 14,
+    fontWeight: '500',
     color: '#0F172A',
+  },
+  dateInput: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#0F172A',
+  },
+  categoryTabsContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+    zIndex: 10,
+  },
+  categoryTabs: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 16,
+    padding: 4,
+    gap: 4,
+  },
+  categoryTab: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  categoryTabActive: {
+    backgroundColor: '#2B6CEE',
+    shadowColor: '#2B6CEE',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  categoryTabText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748B',
+    letterSpacing: -0.2,
+  },
+  categoryTabTextActive: {
+    color: '#FFFFFF',
+  },
+  subcategoriesScroll: {
+    flex: 1,
+  },
+  subcategoriesContent: {
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+    paddingBottom: 20,
+  },
+  subcategoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 0,
+  },
+  subcategoryItem: {
+    width: '33.33%',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+  },
+  subcategoryIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-  },
-  categoryButtons: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  categoryButton: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: 12,
-    borderWidth: 1.5,
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  categoryButtonText: {
-    fontSize: fontSizes.sm,
+  subcategoryIconSelected: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 2,
+    borderColor: '#2B6CEE',
+  },
+  subcategoryEmoji: {
+    fontSize: 28,
+  },
+  subcategoryLabel: {
+    fontSize: 12,
     fontWeight: '600',
-    letterSpacing: 0.1,
+    color: '#475569',
+    textAlign: 'center',
+    marginTop: 12,
   },
-  addButton: {
+  subcategoryLabelSelected: {
+    color: '#2B6CEE',
+    fontWeight: '700',
+  },
+  subcategoryLabelAdd: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  addIcon: {
+    fontSize: 24,
+    color: '#94A3B8',
+    fontWeight: '300',
+  },
+  confirmButtonContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    paddingBottom: 24,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  confirmButton: {
     backgroundColor: '#2B6CEE',
-    borderRadius: 14,
-    paddingVertical: spacing.md,
+    borderRadius: 16,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginTop: spacing.md,
     shadowColor: '#2B6CEE',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
     elevation: 6,
   },
-  addButtonText: {
-    fontSize: fontSizes.md,
+  confirmButtonText: {
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.2,

@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   summaryContainer: {
     position: 'relative',
     backgroundColor: '#2B6CEE',
-    borderRadius: 16,
+    borderRadius: 30,
     padding: 24,
     marginBottom: 16,
     marginHorizontal: 16,

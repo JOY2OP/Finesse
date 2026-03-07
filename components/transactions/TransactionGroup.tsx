@@ -18,6 +18,7 @@ interface TransactionGroupProps {
   transactions: Transaction[];
   totalAmount: number;
   onCategoryChange: (id: string, category: string, subcategory?: string) => void;
+  onEditTransaction: (transaction: Transaction) => void;
 }
 
 export default function TransactionGroup({ 
@@ -25,7 +26,8 @@ export default function TransactionGroup({
   date, 
   transactions, 
   totalAmount,
-  onCategoryChange 
+  onCategoryChange,
+  onEditTransaction,
 }: TransactionGroupProps) {
   const formatCurrency = (amount: number) => {
     return '₹' + amount.toLocaleString('en-IN', {
@@ -51,6 +53,7 @@ export default function TransactionGroup({
             transaction={transaction}
             isLast={index === transactions.length - 1}
             onCategoryChange={onCategoryChange}
+            onEditTransaction={onEditTransaction}
           />
         ))}
       </View>

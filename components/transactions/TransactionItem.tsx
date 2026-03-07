@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface Transaction {
@@ -16,10 +16,10 @@ interface TransactionItemProps {
   transaction: Transaction;
   isLast: boolean;
   onCategoryChange: (id: string, category: string, subcategory?: string) => void;
+  onEditTransaction: (transaction: Transaction) => void;
 }
 
-export default function TransactionItem({ transaction, isLast, onCategoryChange }: TransactionItemProps) {
-  const [showCategoryMenu, setShowCategoryMenu] = useState(false);
+export default function TransactionItem({ transaction, isLast, onCategoryChange, onEditTransaction }: TransactionItemProps) {
 
   const getCategoryConfig = (category: string) => {
     switch (category) {
@@ -96,7 +96,7 @@ export default function TransactionItem({ transaction, isLast, onCategoryChange 
         <Text style={styles.amount}>-{formatCurrency(transaction.amount)}</Text>
         <TouchableOpacity 
           style={[styles.categoryButton, { backgroundColor: config.bg }]}
-          onPress={() => setShowCategoryMenu(!showCategoryMenu)}
+          onPress={() => onEditTransaction(transaction)}
         >
           <Text style={[styles.categoryText, { color: config.color }]}>
             {config.label.toUpperCase()}

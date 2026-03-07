@@ -1,4 +1,5 @@
 import { supabase } from '@/app/lib/supabase';
+import { initialExpenses } from '@/constants/mockData';
 import { useCallback, useEffect, useState } from 'react';
 
 interface Expense {
@@ -39,8 +40,8 @@ export function useTransactions() {
     try {
       // Check if supabase is initialized
       if (!supabase) {
-        console.error('Supabase not initialized');
-        setIsLoading(false);
+        console.error('Supabase not initialized, using mock data');
+        loadMockData();
         return;
       }
 
@@ -48,8 +49,8 @@ export function useTransactions() {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
-        console.log('No user logged in');
-        setIsLoading(false);
+        console.log('No user logged in, using mock data');
+        loadMockData();
         return;
       }
 
@@ -115,8 +116,8 @@ export function useTransactions() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        console.error('Backend error:', result);
-        setIsLoading(false);
+        console.error('Backend error, using mock data:', result);
+        loadMockData();
         return;
       }
 
@@ -138,10 +139,29 @@ export function useTransactions() {
 
       setExpenses(transformedExpenses);
     } catch (error) {
-      console.error('Error loading expenses:', error);
+      console.error('Error loading expenses, using mock data:', error);
+      loadMockData();
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadMockData = () => {
+    console.log('📦 Loading mock data as fallback');
+    const mockExpenses: Expense[] = initialExpenses.map((expense) => ({
+      id: expense.id,
+      description: expense.description,
+      amount: expense.amount,
+      category: expense.category,
+      subcategory: expense.subcategory || null,
+      date: expense.date,
+      time: new Date(expense.created_at).toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }),
+    }));
+    setExpenses(mockExpenses);
+    setIsLoading(false);
   };
 
   const handleCategoryChange = useCallback(async (expenseId: string, newCategory: string, subcategory?: string) => {
@@ -251,11 +271,61 @@ export function useTransactions() {
     }
   };
 
+  const updateExpense = async (expenseId: string, updatedExpense: NewExpense & { subcategory?: string }): Promise<boolean> => {
+    const amount = parseFloat(updatedExpense.amount);
+    if (!updatedExpense.amount || amount <= 0) {
+      alert('Please enter a valid amount');
+      return false;
+    }
+
+    // Update local state immediately
+    setExpenses(prevExpenses =>
+      prevExpenses.map(expense =>
+        expense.id === expenseId
+          ? {
+              ...expense,
+              amount,
+              category: updatedExpense.category,
+              subcategory: updatedExpense.subcategory || null,
+              description: updatedExpense.note || expense.description,
+              date: updatedExpense.date,
+            }
+          : expense
+      )
+    );
+
+    try {
+      if (!supabase) return true;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || user.id === 'web-debug-user') return true;
+
+      const response = await fetch(`${BACKEND_URL}/transactions/update-category`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transaction_id: expenseId,
+          category: updatedExpense.category.charAt(0).toUpperCase() + updatedExpense.category.slice(1),
+          subcategory: updatedExpense.subcategory || null,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        console.error('Failed to update transaction:', result);
+      }
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+    }
+
+    return true;
+  };
+
   return {
     expenses,
     isLoading,
     handleCategoryChange,
     addExpense,
+    updateExpense,
     refreshExpenses: loadExpenses,
   };
 }
