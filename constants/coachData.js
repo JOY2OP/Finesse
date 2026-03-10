@@ -16,6 +16,19 @@
  */
 
 /**
+ * @typedef {Object} Challenge
+ * @property {string} id
+ * @property {string} emoji
+ * @property {string} missionType
+ * @property {string} title
+ * @property {string} amount
+ * @property {number} progress
+ * @property {'completed' | 'warning' | 'regular'} status
+ * @property {string} [statusText]
+ * @property {string} color
+ */
+
+/**
  * @typedef {Object} Action
  * @property {string} id
  * @property {string} emoji
@@ -36,16 +49,20 @@
  */
 
 /**
- * @typedef {Object} ThisWeekData
+ * @typedef {Object} ThisMonthData
  * @property {string} status
- * @property {Action[]} actions
+ * @property {number} [streak]
+ * @property {Challenge[]} [challenges]
+ * @property {Action[]} [actions]
+ * @property {SpendingSplit[]} [spendingSplit]
+ * @property {string[]} [insights]
  * @property {string} summary
  */
 
 /**
  * @typedef {Object} CoachData
  * @property {LastMonthData} lastMonth
- * @property {ThisWeekData} thisWeek
+ * @property {ThisMonthData} thisMonth
  */
 
 /** @type {CoachData} */
@@ -85,37 +102,51 @@ export const coachData = {
     ],
     summary: '💡 Overall, last month was spend-heavy and savings-light.',
   },
-  thisWeek: {
+  thisMonth: {
     status: 'Great',
-    actions: [
+    streak: 3,
+    challenges: [
       {
-        id: 'food',
-        emoji: '🍔',
-        title: 'Cut Food Delivery',
-        subtitle: 'Target: ₹2,500 this week',
-        targetAmount: '2,500',
-        currentSpent: '20',
-        color: '#10B981',
+        id: 'invest',
+        emoji: '💰',
+        missionType: 'MISSION: INVEST',
+        title: 'Fixed Deposit',
+        amount: '₹250',
+        progress: 100,
+        status: 'completed',
+        color: '#0052FF',
       },
       {
-        id: 'subscriptions',
-        emoji: '📺',
-        title: 'Cancel Subscriptions',
-        subtitle: 'Unused: ₹799/month',
-        targetAmount: '799',
-        currentSpent: '20',
-        color: '#3B82F6',
+        id: 'groceries',
+        emoji: '🛒',
+        missionType: 'MISSION: CURB SPEND',
+        title: 'Groceries',
+        amount: '₹135',
+        progress: 85,
+        status: 'warning',
+        statusText: '+12% vs avg',
+        color: '#F97316',
       },
       {
-        id: 'cabs',
-        emoji: '🚕',
-        title: 'Cap Cabs',
-        subtitle: 'Set weekly limit: ₹400',
-        targetAmount: '400',
-        currentSpent: '20',
-        color: '#8B5CF6',
+        id: 'realestate',
+        emoji: '🏢',
+        missionType: 'MISSION: MAINTAIN',
+        title: 'Real Estate',
+        amount: '₹120',
+        progress: 40,
+        status: 'regular',
+        color: '#64748B',
       },
     ],
-    summary: "💪 Stick to these 3 goals and you'll save ₹3,200 this week.",
+    spendingSplit: [
+      { category: 'Needs', expected: '50%', actual: '19%' },
+      { category: 'Wants', expected: '30%', actual: '56%' },
+      { category: 'Savings', expected: '20%', actual: '25%' },
+    ],
+    insights: [
+      'Savings are at 25% of spending. Great start, but let\'s aim for 30% by optimizing discretionary spend.',
+      'Review Groceries. Frequent small transactions are adding up to ₹135 weekly.',
+    ],
+    summary: 'Your wants spending ate into your potential savings last month.',
   },
 };

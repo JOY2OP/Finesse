@@ -38,9 +38,9 @@ router.get('/:user_id', async (req, res) => {
 // Add transaction
 router.post('/add', async (req, res) => {
   try {
-    const { user_id, amount, category, note, occured_at } = req.body;
+    const { user_id, amount, category, note, occured_at, subcategory } = req.body;
 
-    console.log('Adding transaction:', { user_id, amount, category, note, occured_at });
+    console.log('Adding transaction:', { user_id, amount, category, note, occured_at, subcategory });
 
     // Validate required fields
     if (!user_id || !amount || !category || !occured_at) {
@@ -58,6 +58,7 @@ router.post('/add', async (req, res) => {
         category,
         note: note || null,
         occured_at,
+        subcategory: subcategory || null
       }])
       .select();
 
@@ -78,22 +79,27 @@ router.post('/add', async (req, res) => {
 // Update transaction category and subcategory
 router.put('/update-category', async (req, res) => {
   try {
-    const { transaction_id, category, subcategory } = req.body;
+    const { transaction_id, amount, category, subcategory, note, occured_at } = req.body;
 
-    console.log('Updating category:', { transaction_id, category, subcategory });
+    console.log('Updating transaction:', { transaction_id, amount, category, subcategory, note, occured_at });
 
-    if (!transaction_id || !category) {
+    if (!transaction_id) {
       return res.status(400).json({ 
-        error: 'Missing required fields: transaction_id, category' 
+        error: 'Missing required field: transaction_id' 
       });
     }
 
+    // Build update object with only provided fields
+    const updateData = {};
+    if (amount !== undefined) updateData.amount = parseFloat(amount);
+    if (category !== undefined) updateData.category = category;
+    if (subcategory !== undefined) updateData.subcategory = subcategory || null;
+    if (note !== undefined) updateData.note = note || null;
+    if (occured_at !== undefined) updateData.occured_at = occured_at;
+
     const { data, error } = await supabase
       .from('transactions')
-      .update({ 
-        category,
-        subcategory: subcategory || null,
-      })
+      .update(updateData)
       .eq('id', transaction_id)
       .select();
 
@@ -102,12 +108,12 @@ router.put('/update-category', async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
 
-    console.log('Category updated:', data);
+    console.log('Transaction updated:', data);
     res.json({ success: true, data: data[0] });
 
   } catch (error) {
-    console.error('Update category error:', error);
-    res.status(500).json({ error: 'Failed to update category' });
+    console.error('Update transaction error:', error);
+    res.status(500).json({ error: 'Failed to update transaction' });
   }
 });
 

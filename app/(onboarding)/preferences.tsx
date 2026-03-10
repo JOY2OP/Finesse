@@ -1,5 +1,6 @@
 import { supabase } from '@/app/lib/supabase';
 import GradientBackground from '@/components/GradientBackground';
+import { BACKEND_URL } from '@/constants/config';
 import { colors, fontSizes, spacing } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { ArrowRight } from 'lucide-react-native';
@@ -14,8 +15,6 @@ import {
 } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const BACKEND_URL = 'http://10.159.6.229:3000';
 
 export default function PreferencesScreen() {
   const [monthlyIncome, setMonthlyIncome] = useState('');

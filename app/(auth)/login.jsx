@@ -34,7 +34,7 @@ export default function LoginScreen() {
       }
 
       // Check if user has preferences
-      const response = await fetch(`http://10.159.6.229:3000/preferences/${user.id}`);
+      const response = await fetch(`${BACKEND_URL}/preferences/${user.id}`);
       const result = await response.json();
 
       if (result.success && result.exists) {

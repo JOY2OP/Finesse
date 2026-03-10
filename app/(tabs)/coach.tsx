@@ -1,11 +1,12 @@
-import ActionCard from '@/components/coach/ActionCard';
 import Gauge from '@/components/coach/Gauge';
 import InsightBullet from '@/components/coach/InsightBullet';
+import MonthlyChallengeCard from '@/components/coach/MonthlyChallengeCard';
 import RankedCard from '@/components/coach/RankedCard';
 import SplitTable from '@/components/coach/SplitTable';
 import GradientBackground from '@/components/GradientBackground';
 import Loading from '@/components/Loading';
 import { coachData } from '@/constants/coachData';
+import { BACKEND_URL } from '@/constants/config';
 import React, { useEffect, useState } from 'react';
 import {
   ScrollView,
@@ -16,9 +17,7 @@ import {
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 
-type TabType = 'lastMonth' | 'thisWeek';
-
-const BACKEND_URL = 'http://10.159.6.229:3000';
+type TabType = 'lastMonth' | 'thisMonth';
 
 export default function CoachTab() {
   const [activeTab, setActiveTab] = useState<TabType>('lastMonth');
@@ -33,12 +32,13 @@ export default function CoachTab() {
   });
   const [lastMonthData, setLastMonthData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasFetchedData, setHasFetchedData] = useState(false);
 
   useEffect(() => {
-    if (activeTab === 'lastMonth') {
+    if (activeTab === 'lastMonth' && !hasFetchedData && !lastMonthData) {
       fetchLastMonthData();
     }
-  }, [activeTab]);
+  }, [activeTab, hasFetchedData, lastMonthData]);
 
   const fetchLastMonthData = async () => {
     try {
@@ -46,6 +46,8 @@ export default function CoachTab() {
       
       if (!supabase) {
         console.error('Supabase not initialized');
+        setLastMonthData(coachData.lastMonth);
+        setHasFetchedData(true);
         return;
       }
       
@@ -53,6 +55,8 @@ export default function CoachTab() {
       
       if (!user) {
         console.error('No user found');
+        setLastMonthData(coachData.lastMonth);
+        setHasFetchedData(true);
         return;
       }
 
@@ -62,19 +66,24 @@ export default function CoachTab() {
       if (result.success) {
         setLastMonthData(result.data);
         console.log('✅ Fetched last month data:', result.data);
+      } else {
+        // Fallback to static data if API fails
+        setLastMonthData(coachData.lastMonth);
       }
+      setHasFetchedData(true);
     } catch (error) {
       console.error('Error fetching last month data:', error);
       // Fallback to static data
       setLastMonthData(coachData.lastMonth);
+      setHasFetchedData(true);
     } finally {
       setIsLoading(false);
     }
   };
 
   const isLastMonth = activeTab === 'lastMonth';
-  const currentData = isLastMonth ? (lastMonthData || coachData.lastMonth) : coachData.thisWeek;
-  const thisWeekData = !isLastMonth ? coachData.thisWeek : null;
+  const currentData = isLastMonth ? (lastMonthData || coachData.lastMonth) : coachData.thisMonth;
+  const thisMonthData = !isLastMonth ? coachData.thisMonth : null;
 
   const handleSetLimit = (category: 'food' | 'subscriptions' | 'cabs') => {
     setActiveLimits(prev => ({
@@ -114,11 +123,11 @@ export default function CoachTab() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.segment, activeTab === 'thisWeek' && styles.segmentActive]}
-              onPress={() => setActiveTab('thisWeek')}
+              style={[styles.segment, activeTab === 'thisMonth' && styles.segmentActive]}
+              onPress={() => setActiveTab('thisMonth')}
             >
-              <Text style={[styles.segmentText, activeTab === 'thisWeek' && styles.segmentTextActive]}>
-                This Week
+              <Text style={[styles.segmentText, activeTab === 'thisMonth' && styles.segmentTextActive]}>
+                This Month
               </Text>
             </TouchableOpacity>
           </View>
@@ -177,26 +186,52 @@ export default function CoachTab() {
                 </TouchableOpacity>
               </View>
             </>
-          ) : thisWeekData ? (
+          ) : thisMonthData ? (
             <>
-              <View style={styles.thisWeekSection}>
-                {thisWeekData.actions.map((action: any) => (
-                  <ActionCard
-                    key={action.id}
-                    emoji={action.emoji}
-                    title={action.title}
-                    subtitle={action.subtitle}
-                    targetAmount={action.targetAmount}
-                    currentSpent={action.currentSpent}
-                    color={action.color}
-                    isActive={activeLimits[action.id as keyof typeof activeLimits]}
-                    onSetLimit={() => handleSetLimit(action.id as 'food' | 'subscriptions' | 'cabs')}
-                  />
-                ))}
+              {/* <StreakCard weeks={thisMonthData.streak || 3} /> */}
+
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>MONTHLY CHALLENGE BOARD</Text>
               </View>
 
-              <View style={styles.summarySection}>
-                <Text style={styles.summaryText}>{thisWeekData.summary}</Text>
+              {thisMonthData.challenges && thisMonthData.challenges.map((challenge: any) => (
+                <MonthlyChallengeCard
+                  key={challenge.id}
+                  emoji={challenge.emoji}
+                  missionType={challenge.missionType}
+                  title={challenge.title}
+                  amount={challenge.amount}
+                  progress={challenge.progress}
+                  status={challenge.status}
+                  statusText={challenge.statusText}
+                  color={challenge.color}
+                />
+              ))}
+
+              {thisMonthData.spendingSplit && thisMonthData.spendingSplit.length > 0 ? (
+                <SplitTable
+                  data={thisMonthData.spendingSplit}
+                  caption={thisMonthData.summary}
+                />
+              ) : null}
+
+              <View style={styles.coachNoteSection}>
+                <View style={styles.coachNoteHeader}>
+                  <View style={styles.coachIconContainer}>
+                    <Text style={styles.coachIcon}>✨</Text>
+                  </View>
+                  <Text style={styles.coachNoteTitle}>Coach's Note</Text>
+                </View>
+                
+                <View style={styles.insightsContainer}>
+                  {thisMonthData.insights && thisMonthData.insights.map((insight: string, index: number) => (
+                    <InsightBullet key={index} text={insight} icon={index === 0 ? '💡' : '🛒'} />
+                  ))}
+                </View>
+
+                {/* <TouchableOpacity style={styles.actionButton}>
+                  <Text style={styles.actionButtonText}>Complete Missions</Text>
+                </TouchableOpacity> */}
               </View>
             </>
           ) : null}
@@ -342,7 +377,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  thisWeekSection: {
+  thisMonthSection: {
     paddingVertical: 16,
   },
   summarySection: {

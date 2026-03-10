@@ -202,8 +202,8 @@ Write ONE sentence summary (under 20 words) starting with an emoji. Be honest ab
     }
 });
 
-router.get('/thisWeek', async (req, res) => {
-    res.json({ success: true, message: 'This week endpoint' });
+router.get('/thisMonth', async (req, res) => {
+    res.json({ success: true, message: 'This month endpoint' });
 });
 
 module.exports = router;

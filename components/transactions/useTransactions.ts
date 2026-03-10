@@ -1,4 +1,5 @@
 import { supabase } from '@/app/lib/supabase';
+import { BACKEND_URL } from '@/constants/config';
 import { initialExpenses } from '@/constants/mockData';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -17,9 +18,8 @@ interface NewExpense {
   category: 'needs' | 'wants' | 'investing';
   note: string;
   date: string;
+  subcategory: string;
 }
-
-const BACKEND_URL = 'http://10.159.6.229:3000';
 
 // Log backend URL for debugging
 if (typeof window !== 'undefined') {
@@ -229,6 +229,7 @@ export function useTransactions() {
         category: newExpense.category.charAt(0).toUpperCase() + newExpense.category.slice(1),
         note: newExpense.note || null,
         occured_at: new Date(newExpense.date).toISOString(),
+        subcategory: newExpense.subcategory || null,
       };
 
       console.log('Sending transaction to backend:', transaction);
@@ -258,6 +259,7 @@ export function useTransactions() {
         description: newExpense.note || 'Manual Entry',
         amount: parseFloat(newExpense.amount),
         category: newExpense.category,
+        subcategory: newExpense.subcategory || null,
         date: newExpense.date,
         time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       };
@@ -304,20 +306,26 @@ export function useTransactions() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           transaction_id: expenseId,
+          amount,
           category: updatedExpense.category.charAt(0).toUpperCase() + updatedExpense.category.slice(1),
           subcategory: updatedExpense.subcategory || null,
+          note: updatedExpense.note || null,
+          occured_at: new Date(updatedExpense.date).toISOString(),
         }),
       });
 
       const result = await response.json();
       if (!response.ok || !result.success) {
         console.error('Failed to update transaction:', result);
+        return false;
       }
+      
+      console.log('Transaction updated successfully:', result.data);
+      return true;
     } catch (error) {
       console.error('Error updating transaction:', error);
+      return false;
     }
-
-    return true;
   };
 
   return {
