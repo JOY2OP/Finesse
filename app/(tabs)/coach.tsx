@@ -9,11 +9,11 @@ import { coachData } from '@/constants/coachData';
 import { BACKEND_URL } from '@/constants/config';
 import React, { useEffect, useState } from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 
@@ -107,16 +107,28 @@ export default function CoachTab() {
       
       if (result.success && result.data.challenges.length > 0) {
         // Transform actions to challenge format
-        const challenges = result.data.challenges.map((action: any, index: number) => ({
-          id: index + 1,
-          emoji: ['🎯', '💰', '✨'][index] || '🎯',
-          missionType: 'MISSION',
-          title: action.title,
-          amount: action.target,
-          progress: 0,
-          status: 'regular' as const,
-          color: ['#0052FF', '#10B981', '#F59E0B'][index] || '#0052FF',
-        }));
+        const challenges = result.data.challenges.map((action: any, index: number) => {
+          const missionType = action.type === 'curb' ? 'CURB' : 
+                             action.type === 'encourage' ? 'ENCOURAGE' : 'MAINTAIN';
+          
+          const color = action.type === 'curb' ? '#EF4444' : 
+                       action.type === 'encourage' ? '#10B981' : '#0052FF';
+          
+          const target = action.metric.unit === 'currency' 
+            ? `₹${action.metric.target.toLocaleString('en-IN')}`
+            : `${action.metric.target}%`;
+
+          return {
+            id: index + 1,
+            emoji: action.emoji || '🎯',
+            missionType,
+            title: action.title,
+            amount: target,
+            progress: 0,
+            status: 'regular' as const,
+            color,
+          };
+        });
         
         setThisMonthData({
           ...coachData.thisMonth,

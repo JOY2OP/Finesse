@@ -46,7 +46,7 @@ export default function MonthlyChallengeCard({
             <Text style={styles.emoji}>{emoji}</Text>
           </View>
           <View>
-            <Text style={styles.missionType}>{missionType}</Text>
+            <Text style={styles.missionType}>MISSION: {missionType}</Text>
             <Text style={styles.title}>{title}</Text>
           </View>
         </View>
