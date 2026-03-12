@@ -9,11 +9,11 @@ import { coachData } from '@/constants/coachData';
 import { BACKEND_URL } from '@/constants/config';
 import React, { useEffect, useState } from 'react';
 import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 
@@ -31,14 +31,17 @@ export default function CoachTab() {
     cabs: false,
   });
   const [lastMonthData, setLastMonthData] = useState<any>(null);
+  const [thisMonthData, setThisMonthData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetchedData, setHasFetchedData] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'lastMonth' && !hasFetchedData && !lastMonthData) {
       fetchLastMonthData();
+    } else if (activeTab === 'thisMonth' && !thisMonthData) {
+      fetchThisMonthData();
     }
-  }, [activeTab, hasFetchedData, lastMonthData]);
+  }, [activeTab, hasFetchedData, lastMonthData, thisMonthData]);
 
   const fetchLastMonthData = async () => {
     try {
@@ -81,9 +84,58 @@ export default function CoachTab() {
     }
   };
 
+  const fetchThisMonthData = async () => {
+    try {
+      setIsLoading(true);
+      
+      if (!supabase) {
+        console.error('Supabase not initialized');
+        setThisMonthData(coachData.thisMonth);
+        return;
+      }
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.error('No user found');
+        setThisMonthData(coachData.thisMonth);
+        return;
+      }
+
+      const response = await fetch(`${BACKEND_URL}/ai/thisMonth?user_id=${user.id}`);
+      const result = await response.json();
+      
+      if (result.success && result.data.challenges.length > 0) {
+        // Transform actions to challenge format
+        const challenges = result.data.challenges.map((action: any, index: number) => ({
+          id: index + 1,
+          emoji: ['🎯', '💰', '✨'][index] || '🎯',
+          missionType: 'MISSION',
+          title: action.title,
+          amount: action.target,
+          progress: 0,
+          status: 'regular' as const,
+          color: ['#0052FF', '#10B981', '#F59E0B'][index] || '#0052FF',
+        }));
+        
+        setThisMonthData({
+          ...coachData.thisMonth,
+          challenges
+        });
+        console.log('✅ Fetched this month data:', challenges);
+      } else {
+        setThisMonthData(coachData.thisMonth);
+      }
+    } catch (error) {
+      console.error('Error fetching this month data:', error);
+      setThisMonthData(coachData.thisMonth);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const isLastMonth = activeTab === 'lastMonth';
-  const currentData = isLastMonth ? (lastMonthData || coachData.lastMonth) : coachData.thisMonth;
-  const thisMonthData = !isLastMonth ? coachData.thisMonth : null;
+  const currentData = isLastMonth ? (lastMonthData || coachData.lastMonth) : (thisMonthData || coachData.thisMonth);
 
   const handleSetLimit = (category: 'food' | 'subscriptions' | 'cabs') => {
     setActiveLimits(prev => ({
@@ -194,19 +246,25 @@ export default function CoachTab() {
                 <Text style={styles.sectionTitle}>MONTHLY CHALLENGE BOARD</Text>
               </View>
 
-              {thisMonthData.challenges && thisMonthData.challenges.map((challenge: any) => (
-                <MonthlyChallengeCard
-                  key={challenge.id}
-                  emoji={challenge.emoji}
-                  missionType={challenge.missionType}
-                  title={challenge.title}
-                  amount={challenge.amount}
-                  progress={challenge.progress}
-                  status={challenge.status}
-                  statusText={challenge.statusText}
-                  color={challenge.color}
-                />
-              ))}
+              {thisMonthData.challenges && thisMonthData.challenges.length > 0 ? (
+                thisMonthData.challenges.map((challenge: any) => (
+                  <MonthlyChallengeCard
+                    key={challenge.id}
+                    emoji={challenge.emoji}
+                    missionType={challenge.missionType}
+                    title={challenge.title}
+                    amount={challenge.amount}
+                    progress={challenge.progress}
+                    status={challenge.status}
+                    statusText={challenge.statusText}
+                    color={challenge.color}
+                  />
+                ))
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>No challenges available yet. Complete last month's analysis first!</Text>
+                </View>
+              )}
 
               {thisMonthData.spendingSplit && thisMonthData.spendingSplit.length > 0 ? (
                 <SplitTable
@@ -394,5 +452,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  emptyState: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

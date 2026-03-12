@@ -26,11 +26,34 @@ router.get('/lastMonth', async (req, res) => {
         const now = new Date();
         const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        const lastMonthKey = lastMonthStart.toISOString().split('T')[0]; // "2026-02-01"
 
         console.log('Date range:', {
             start: lastMonthStart.toISOString(),
-            end: lastMonthEnd.toISOString()
+            end: lastMonthEnd.toISOString(),
+            monthKey: lastMonthKey
         });
+
+        // Check if summary already exists in Supabase
+        const { data: existingSummary, error: summaryError } = await supabase
+            .from('monthly_summary')
+            .select('*')
+            .eq('user_id', user_id)
+            .eq('month', lastMonthKey)
+            .single();
+
+        if (!summaryError && existingSummary) {
+            console.log('✅ Found existing summary in database');
+            return res.json({ 
+                success: true, 
+                data: {
+                    ...existingSummary.summary,
+                    actions: existingSummary.action
+                }
+            });
+        }
+
+        console.log('📝 No existing summary, generating new one...');
 
         // Fetch last month's transactions
         const { data: transactions, error } = await supabase
@@ -53,7 +76,7 @@ router.get('/lastMonth', async (req, res) => {
             console.log('Sample transaction:', JSON.stringify(transactions[0], null, 2));
         }
 
-        if (!transactions || transactions.length === 0) {
+        if (transactions.length === 0) {
             return res.json({
                 success: true,
                 data: {
@@ -87,43 +110,18 @@ router.get('/lastMonth', async (req, res) => {
                     'Smaller, but frequent'
         }));
 
-        // Calculate spending by budget category (needs/wants/investing)
-        // Check if transactions have category field set
-        const budgetSplit = transactions.reduce((acc, t) => {
-            const cat = t.category;
-            if (cat === 'needs' || cat === 'wants' || cat === 'investing') {
-                acc[cat] = (acc[cat] || 0) + t.amount;
-            }
-            return acc;
-        }, { needs: 0, wants: 0, investing: 0 });
-
+        // Calculate spending by budget category
+        const budgetSplit = { needs: 0, wants: 0, investing: 0 };
         const totalSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
 
-        console.log('Budget split:', budgetSplit, 'Total:', totalSpent);
+        transactions.forEach(t => {
+            const cat = (t.category || '').toLowerCase();
+            if (cat === 'needs') budgetSplit.needs += t.amount;
+            else if (cat === 'wants') budgetSplit.wants += t.amount;
+            else if (cat === 'investing') budgetSplit.investing += t.amount;
+        });
 
-        // Check if any transactions have proper category set
-        const hasCategoryData = budgetSplit.needs > 0 || budgetSplit.wants > 0 || budgetSplit.investing > 0;
-        
-        // If no category data, distribute based on subcategory heuristics
-        if (!hasCategoryData && totalSpent > 0) {
-            console.log('⚠️ No category data found, using heuristics');
-            transactions.forEach(t => {
-                const sub = (t.subcategory || '').toLowerCase();
-                // Investing categories
-                if (sub.includes('deposit') || sub.includes('investment') || sub.includes('mutual') || sub.includes('stock')) {
-                    budgetSplit.investing += t.amount;
-                }
-                // Needs categories
-                else if (sub.includes('groceries') || sub.includes('rent') || sub.includes('utilities') || sub.includes('medical') || sub.includes('insurance')) {
-                    budgetSplit.needs += t.amount;
-                }
-                // Everything else as wants
-                else {
-                    budgetSplit.wants += t.amount;
-                }
-            });
-            console.log('Budget split after heuristics:', budgetSplit);
-        }
+        console.log('Budget split:', budgetSplit, 'Total:', totalSpent);
 
         // Avoid division by zero
         const spendingSplit = [
@@ -155,6 +153,7 @@ Return ONLY 4 bullet points, each starting with a dash (-). Be specific with num
 
         const insightsResponse = await ai.models.generateContent({
             model: "gemini-2.5-flash-lite",
+            // model: "gemini-2.5-flash",
             contents: insightsPrompt,
         });
 
@@ -177,8 +176,120 @@ Write ONE sentence summary (under 20 words) starting with an emoji. Be honest ab
 
         // Determine status
         const savingsPercent = (budgetSplit.investing / totalSpent) * 100;
-        const status = savingsPercent >= 20 ? 'Great' :
-            savingsPercent >= 15 ? 'Good' : 'OK';
+        const status = savingsPercent >= 20 ? 'Great' : savingsPercent >= 15 ? 'Good' : 'OK';
+        
+        console.log(
+            "TOTAL SPENT===",
+            totalSpent.toLocaleString('en-IN'),
+            "\nSPENDING SPLIT===",
+            spendingSplit,
+            "\nSORTED CATEGORIES===",
+            sortedCategories
+            );
+
+        const actionPrompt = `
+You are a financial coach generating monthly challenge cards for a budgeting app.
+The goal is to create actionable missions for the upcoming month based on last month's spending behavior.
+
+LAST MONTH'S DATA: 
+Total Spent: ₹${totalSpent.toLocaleString('en-IN')}
+Spending Split:
+- Needs: ${spendingSplit[0].actual}
+- Wants: ${spendingSplit[1].actual}
+- Savings: ${spendingSplit[2].actual}
+
+Top Spending Categories:
+${sortedCategories
+  .slice(0, 3)
+  .map(([cat, amt], i) => `${i + 1}. ${formatCategoryName(cat)} ₹${amt}`)
+  .join('\n')}
+
+---
+
+MISSION RULES
+
+Generate EXACTLY 3 mission cards.
+
+Each card must be one of these types:
+
+1. "curb"  
+Used when a category has excessive spending.  
+Goal: reduce spending vs last month.
+
+2. "encourage"  
+Used when savings or investing should increase.
+
+3. "maintain"  
+Used when a category is stable and should stay consistent.
+
+Important logic:
+
+- If wants spending is high (>30%), generate 1 to 3 curb cards from top discretionary categories.
+- If savings are low (<20%), generate an encourage card to increase investing.
+- If a category is stable or essential, generate a maintain card.
+- Prioritize curb cards when overspending is severe.
+
+---
+
+RETURN FORMAT
+
+Return ONLY a JSON array with EXACTLY 3 objects.
+
+Each object must follow this schema:
+
+{
+"type": "curb | encourage | maintain",
+"title": "Short category or action name",
+"emoji": "relevant emoji",
+"metric": {
+  "target": number,
+  "unit": "currency"
+},
+"priority": number
+}
+
+---
+
+CARD TYPE GUIDELINES
+
+curb:
+- title = spending category (Shopping, Groceries, Dining etc.)
+- target = ~70 to 80% of last month's spend
+
+encourage:
+- title = investment or saving action (Fixed Deposit, SIP, Savings Boost)
+- target = reasonable monthly contribution
+
+maintain:
+- title = stable category (Housing, Utilities, Transport etc.)
+- target = similar to last month's spending
+
+---
+
+IMPORTANT
+
+- Return ONLY JSON.
+- Do NOT include explanations.
+- Do NOT include markdown.
+- Do NOT include additional text.
+`;
+
+        const actionResponse = await ai.models.generateContent({
+            model: "gemini-2.5-flash-lite",
+            contents: actionPrompt,
+        });
+
+        // Parse action cards
+        const actionText = actionResponse.text;
+        const actionBlocks = actionText.split('\n\n').filter(b => b.trim());
+        const actions = actionBlocks.slice(0, 3).map((block, idx) => {
+            const lines = block.split('\n');
+            const title = lines.find(l => l.startsWith('Title:'))?.replace('Title:', '').trim() || `Challenge ${idx + 1}`;
+            const description = lines.find(l => l.startsWith('Description:'))?.replace('Description:', '').trim() || 'Improve your spending';
+            const target = lines.find(l => l.startsWith('Target:'))?.replace('Target:', '').trim() || '₹1000';
+            
+            return { title, description, target };
+        });
 
         const result = {
             status,
@@ -190,8 +301,35 @@ Write ONE sentence summary (under 20 words) starting with an emoji. Be honest ab
                 `Savings rate was ${spendingSplit[2].actual}.`
             ],
             spendingSplit,
-            summary: summary || `💡 Last month you spent ₹${totalSpent.toLocaleString('en-IN')} across ${transactions.length} transactions.`
+            summary: summary || `💡 Last month you spent ₹${totalSpent.toLocaleString('en-IN')} across ${transactions.length} transactions.`,
+            actions: actions.length > 0 ? actions : [
+                { title: 'Reduce dining out', description: 'Cut restaurant spending by 20%', target: '₹2000' },
+                { title: 'Increase savings', description: 'Save an extra 5% this month', target: '5%' },
+                { title: 'Track daily', description: 'Log every transaction within 24 hours', target: '100%' }
+            ]
         };
+
+        // Save to Supabase
+        const { error: insertError } = await supabase
+            .from('monthly_summary')
+            .insert({
+                user_id,
+                month: lastMonthKey,
+                summary: {
+                    status: result.status,
+                    rankedCategories: result.rankedCategories,
+                    insights: result.insights,
+                    spendingSplit: result.spendingSplit,
+                    summary: result.summary
+                },
+                action: result.actions
+            });
+
+        if (insertError) {
+            console.error('⚠️ Failed to save summary:', insertError);
+        } else {
+            console.log('💾 Saved summary to database');
+        }
 
         console.log('✅ Generated coach data:', JSON.stringify(result, null, 2));
         res.json({ success: true, data: result });
@@ -203,7 +341,46 @@ Write ONE sentence summary (under 20 words) starting with an emoji. Be honest ab
 });
 
 router.get('/thisMonth', async (req, res) => {
-    res.json({ success: true, message: 'This month endpoint' });
+    try {
+        const { user_id } = req.query;
+
+        if (!user_id) {
+            return res.status(400).json({ error: 'user_id is required as query parameter' });
+        }
+
+        console.log('🎯 Fetching this month actions for user:', user_id);
+
+        // Calculate current month's date
+        const now = new Date();
+        const currentMonthKey = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+
+        console.log('Current month key:', currentMonthKey);
+
+        // Fetch actions from monthly_summary
+        const { data: summary, error } = await supabase
+            .from('monthly_summary')
+            .select('action')
+            .eq('user_id', user_id)
+            .eq('month', currentMonthKey)
+            .single();
+
+        if (error || !summary) {
+            console.log('No actions found for current month');
+            return res.json({
+                success: true,
+                data: {
+                    challenges: []
+                }
+            });
+        }
+
+        console.log('✅ Found actions:', summary.action);
+        res.json({ success: true, data: { challenges: summary.action || [] } });
+
+    } catch (err) {
+        console.error('Fetch error:', err);
+        res.status(500).json({ error: 'Failed to fetch this month data', details: err.message });
+    }
 });
 
 module.exports = router;
