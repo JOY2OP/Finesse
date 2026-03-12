@@ -123,7 +123,7 @@ export const initialExpenses = [
 ];
 
 // Canned responses for chat
-export const chatResponses = {
+export const chatResponses: Record<string, string> = {
   "hello": "Hello! I'm your Finesse financial assistant. How can I help you today?",
   "hi": "Hi there! I'm your Finesse financial assistant. How can I help with your finances today?",
   "help": "I can help you with budgeting tips, investment advice, and expense categorization. Just ask me a specific question!",

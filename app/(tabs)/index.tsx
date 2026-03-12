@@ -1,24 +1,32 @@
-import ExpenseItem from '@/components/ExpenseItem';
 import GradientBackground from '@/components/GradientBackground';
 import LoadingBar from '@/components/Loading';
 import AddTransactionModal from '@/components/transactions/AddTransactionModal';
+import CategoryFilter from '@/components/transactions/CategoryFilter';
+import TransactionGroup from '@/components/transactions/TransactionGroup';
 import TransactionSummary from '@/components/transactions/TransactionSummary';
 import { useTransactions } from '@/components/transactions/useTransactions';
-import { colors, fontSizes, spacing } from '@/constants/theme';
+import { colors } from '@/constants/theme';
+import { useRouter } from 'expo-router';
 import { Plus, Search as SearchIcon } from 'lucide-react-native';
-import { useRef, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+type Category = 'needs' | 'wants' | 'investing';
+
 export default function HomeScreen() {
-  const { expenses, isLoading, handleCategoryChange, addExpense } = useTransactions();
+  const { expenses, isLoading, handleCategoryChange, addExpense, updateExpense } = useTransactions();
   const [modalVisible, setModalVisible] = useState(false);
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<Category[]>(['needs', 'wants', 'investing']);
   const [newExpense, setNewExpense] = useState<{
     amount: string;
     category: 'needs' | 'wants' | 'investing';
     note: string;
     date: string;
+    subcategory?: string;
   }>({
     amount: '',
     category: 'needs',
@@ -26,26 +34,59 @@ export default function HomeScreen() {
     date: new Date().toISOString().split('T')[0],
   });
   const insets = useSafeAreaInsets();
-  const flatListRef = useRef<FlatList>(null);
 
   const handleAddExpense = async () => {
     const success = await addExpense(newExpense);
     if (success) {
-      setModalVisible(false);
-      setNewExpense({
-        amount: '',
-        category: 'needs',
-        note: '',
-        date: new Date().toISOString().split('T')[0],
-      });
+      closeModal();
     }
+  };
+
+  const handleEditTransaction = (transaction: { id: string; description: string; category: string; subcategory?: string; amount: number; date: string }) => {
+    setNewExpense({
+      amount: String(transaction.amount),
+      category: (transaction.category as Category) || 'needs',
+      note: transaction.description || '',
+      date: transaction.date,
+      subcategory: transaction.subcategory,
+    });
+    setEditingTransactionId(transaction.id);
+    setModalMode('edit');
+    setModalVisible(true);
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editingTransactionId) return;
+    const success = await updateExpense(editingTransactionId, newExpense);
+    if (success) {
+      closeModal();
+    }
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setModalMode('add');
+    setEditingTransactionId(null);
+    setNewExpense({
+      amount: '',
+      category: 'needs',
+      note: '',
+      date: new Date().toISOString().split('T')[0],
+    });
+  };
+
+  const handleToggleCategory = (category: Category) => {
+    setSelectedCategories(prev => 
+      prev.includes(category) 
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
   };
 
   if (isLoading) {
     return (
       <GradientBackground>
         <View style={[styles.container, styles.loadingContainer, { paddingBottom: insets.bottom }]}>
-          {/* <Text style={styles.loadingText}>Loading...</Text> */}
           <LoadingBar />
         </View>
       </GradientBackground>
@@ -61,51 +102,135 @@ export default function HomeScreen() {
     return acc;
   }, {} as Record<string, number>);
 
+  // Group expenses by date
+  const groupedExpenses = expenses.reduce((acc, expense) => {
+    // Skip expenses with invalid dates
+    if (!expense.date) return acc;
+    
+    const date = new Date(expense.date);
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date for expense:', expense);
+      return acc;
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const expenseDate = new Date(date);
+    expenseDate.setHours(0, 0, 0, 0);
+
+    const monthShort = date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    const day = date.getDate();
+    const year = String(date.getFullYear()).slice(-2);
+
+    let groupKey: string;
+    let displayTitle: string;
+    
+    if (expenseDate.getTime() === today.getTime()) {
+      groupKey = expense.date;
+      displayTitle = `TODAY, ${monthShort} ${day}`;
+    } else if (expenseDate.getTime() === yesterday.getTime()) {
+      groupKey = expense.date;
+      displayTitle = `YESTERDAY, ${monthShort} ${day}`;
+    } else {
+      groupKey = expense.date;
+      displayTitle = `${monthShort} ${day}, ${date.getFullYear()}`;
+    }
+
+    if (!acc[groupKey]) {
+      acc[groupKey] = {
+        title: displayTitle,
+        date: expense.date,
+        transactions: [],
+        total: 0,
+      };
+    }
+
+    acc[groupKey].transactions.push(expense);
+    acc[groupKey].total += expense.amount;
+
+    return acc;
+  }, {} as Record<string, any>);
+
+  // Sort groups by date (latest first)
+  const sortedGroups = Object.values(groupedExpenses).sort(
+    (a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
+  const router = useRouter();
+
   return (
     <GradientBackground>
-      <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+      <View style={styles.container}>
+        {/* Header */}
         <Animated.View 
           style={styles.header}
           entering={FadeIn.duration(600)}
         >
-          <Text style={styles.logo}>finesse</Text>
+          <TouchableOpacity style={styles.profileButton}>
+            <Text style={styles.profileIcon}>👤</Text>
+          </TouchableOpacity>
+          <Text style={styles.logo}>Finesse</Text>
           <TouchableOpacity style={styles.searchButton}>
-            <SearchIcon size={20} color={colors.text.primary} />
+            <SearchIcon size={20} color={colors.primary} />
           </TouchableOpacity>
         </Animated.View>
         
-        <TransactionSummary expenseTotals={expenseTotals} />
-        
-        <Text style={styles.sectionTitle}>Recent Expenses</Text>
-        
-        <FlatList
-          ref={flatListRef}
-          data={expenses}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <ExpenseItem 
-              expense={item} 
-              onCategoryChange={handleCategoryChange}
-            />
-          )}
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 50 }]}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.expensesList}
-        />
+        >
+          {/* Transaction Summary */}
+          <TransactionSummary expenseTotals={expenseTotals} />
+          
+          {/* Category Filters */}
+          <CategoryFilter 
+            selectedCategories={selectedCategories}
+            onToggleCategory={handleToggleCategory}
+          />
+          
+          {/* Transaction Groups */}
+          <View style={styles.transactionsContainer}>
+            {sortedGroups.map((group: any) => (
+              <TransactionGroup
+                key={group.date}
+                title={group.title}
+                date={group.date}
+                transactions={group.transactions}
+                totalAmount={group.total}
+                onCategoryChange={handleCategoryChange}
+                onEditTransaction={handleEditTransaction}
+              />
+            ))}
+          </View>
+        </ScrollView>
 
+        {/* Floating Add Button */}
         <TouchableOpacity
-          style={styles.floatingButton}
-          onPress={() => setModalVisible(true)}
+          style={[styles.floatingButton, { bottom: insets.bottom }]}
+          onPress={() => {
+            setModalMode('add');
+            setModalVisible(true);
+          }}
           activeOpacity={0.8}
         >
           <Plus size={28} color="#FFFFFF" />
         </TouchableOpacity>
 
+        {/* Add/Edit Transaction Modal */}
         <AddTransactionModal
           visible={modalVisible}
           newExpense={newExpense}
-          onClose={() => setModalVisible(false)}
+          onClose={closeModal}
           onExpenseChange={setNewExpense}
-          onSubmit={handleAddExpense}
+          onSubmit={modalMode === 'edit' ? handleEditSubmit : handleAddExpense}
+          mode={modalMode}
         />
       </View>
     </GradientBackground>
@@ -115,52 +240,65 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: spacing.md,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 0,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.md,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: 'rgba(248, 250, 252, 0.8)',
+    backdropFilter: 'blur(10px)',
+  },
+  profileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(43, 108, 238, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileIcon: {
+    fontSize: 24,
   },
   logo: {
-    fontSize: fontSizes.xl,
+    fontSize: 18,
     fontWeight: '700',
-    color: colors.text.primary,
+    color: '#0F172A',
+    letterSpacing: -0.5,
+    flex: 1,
+    textAlign: 'center',
   },
   searchButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.background.card,
+    backgroundColor: 'rgba(43, 108, 238, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  sectionTitle: {
-    fontSize: fontSizes.md,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginBottom: spacing.md,
-  },
-  expensesList: {
-    paddingBottom: spacing.xl + 60,
+  transactionsContainer: {
+    paddingHorizontal: 16,
+    marginTop: 8,
   },
   loadingContainer: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
-    fontSize: fontSizes.md,
-    color: colors.text.secondary,
-  },
   floatingButton: {
     position: 'absolute',
-    right: spacing.md,
-    bottom: spacing.xl,
+    right: 24,
+    // bottom: 200,
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.primary,
+    backgroundColor: '#2B6CEE',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',

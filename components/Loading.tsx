@@ -1,56 +1,85 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { Animated, Easing, StyleSheet } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
-const LoadingBar = () => {
-  const position = useRef(new Animated.Value(0)).current;
+const F_PATH =
+  'M 10 95 L 10 5 ' +
+  'L 50 5 ' +
+  'L 10 5 ' +
+  'L 10 52 ' +
+  'L 42 52 ' +
+  'L 10 52';
+
+const PATH_LENGTH = 281;
+const PILL_LENGTH = 60;
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+const Loading = () => {
+  const progress = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Fade in slowly
     Animated.timing(opacity, {
       toValue: 1,
-      duration: 600,
+      duration: 500,
       easing: Easing.out(Easing.ease),
       useNativeDriver: true,
     }).start();
 
-    // Bounce left to right loop
     Animated.loop(
       Animated.sequence([
-        Animated.timing(position, {
+        Animated.timing(progress, {
           toValue: 1,
-          duration: 900,
+          duration: 750,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
-        Animated.timing(position, {
+        Animated.timing(progress, {
           toValue: 0,
-          duration: 900,
+          duration: 750,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ])
     ).start();
   }, []);
 
-  const BAR_WIDTH = 240;
-  const PILL_WIDTH = 72;
-
-  const translateX = position.interpolate({
+  const strokeDashoffset = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, BAR_WIDTH - PILL_WIDTH],
+    outputRange: [PATH_LENGTH, 0],
   });
 
   return (
     <Animated.View style={[styles.wrapper, { opacity }]}>
-      <View style={[styles.track, { width: BAR_WIDTH }]}>
-        <Animated.View
-          style={[
-            styles.pill,
-            { width: PILL_WIDTH, transform: [{ translateX }] },
-          ]}
+      <Svg
+        width={60}
+        height={100}
+        viewBox="0 0 60 100"
+        style={styles.svg}
+      >
+        {/* Track – faint ghost of the F */}
+        <Path
+          d={F_PATH}
+          stroke="rgba(43, 108, 238, 0.15)"
+          strokeWidth={5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
         />
-      </View>
+
+        {/* Animated glowing pill */}
+        <AnimatedPath
+          d={F_PATH}
+          stroke="#2B6CEE"
+          strokeWidth={5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+          strokeDasharray={`${PILL_LENGTH} ${PATH_LENGTH}`}
+          strokeDashoffset={strokeDashoffset}
+        />
+      </Svg>
     </Animated.View>
   );
 };
@@ -60,17 +89,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  track: {
-    height: 5,
-    backgroundColor: 'rgba(126, 124, 124, 0.08)',
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-  pill: {
-    height: 5,
-    backgroundColor: '#ffffff',
-    borderRadius: 999,
+  svg: {
+    shadowColor: '#2B6CEE',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
   },
 });
 
-export default LoadingBar;
+export default Loading;

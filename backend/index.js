@@ -1,11 +1,12 @@
 const express = require('express');
-// const axios = require('axios');
 const cors = require('cors');
 const OpenAI = require("openai");
 
 const authRoutes = require('./auth');
 const aaRoutes = require('./aa');
 const transactionRoutes = require('./transactions');
+const preferencesRoutes = require('./preferences');
+const aiRoutes = require('./ai');
 
 require('dotenv').config();
 
@@ -19,13 +20,19 @@ app.use(cors());
 app.use(express.json());
 
 // Auth routes
-app.use('/auth', authRoutes); //middleware
+app.use('/auth', authRoutes);
 
 // Setu routes
-app.use('/aa', aaRoutes); //middleware
+app.use('/aa', aaRoutes);
+
+// AI routes
+app.use('/ai', aiRoutes);
 
 // Transaction routes
 app.use('/transactions', transactionRoutes);
+
+// Preferences routes
+app.use('/preferences', preferencesRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

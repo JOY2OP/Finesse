@@ -1,10 +1,10 @@
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
+import { Session } from '@supabase/supabase-js';
 import 'expo-dev-client';
 import { Redirect, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
-import { Session } from '@supabase/supabase-js';
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -13,6 +13,13 @@ export default function RootLayout() {
   const segments = useSegments();
 
   useEffect(() => {
+    // Bypass auth on web for debugging
+    // if (Platform.OS === 'web') {
+    //   setSession({ user: { id: 'web-debug-user' } } as any);
+    //   setInitialized(true);
+    //   return;
+    // }
+
     if (!supabase) return;
 
     supabase.auth.getSession().then(({ data: { session: s } }) => {

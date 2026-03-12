@@ -1,7 +1,6 @@
 import { colors } from '@/constants/theme';
 import { Tabs } from 'expo-router';
-import { Chrome as Home, Speech } from 'lucide-react-native';
-
+import { BarChart3, Home, Receipt, User } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
@@ -12,44 +11,77 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.background.card,
-          borderTopWidth: 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          borderTopWidth: 1,
+          borderTopColor: '#E2E8F0',
           height: 60 + insets.bottom,
           paddingBottom: insets.bottom,
+          paddingTop: 12,
           elevation: 0,
           shadowOpacity: 0,
         },
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.text.secondary,
+        tabBarInactiveTintColor: '#94A3B8',
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
-          marginTop: -4,
-          marginBottom: 6,
+          fontSize: 10,
+          fontWeight: '700',
+          marginTop: 4,
+          textTransform: 'uppercase',
+          letterSpacing: 0.5,
         },
       }}>
-      <Tabs.Screen
-        name="coach"
-        options={{
-          title: 'Coach',
-          tabBarIcon: ({ color, size }) => (
-            <Speech size={size} color={color} />
-          ),
-        }}
-      />
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => (
-            <Home size={size} color={color} />
+            <Home size={20} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="activity"
+        options={{
+          title: 'Activity',
+          tabBarIcon: ({ color, size }) => (
+            <Receipt size={20} color={color} />
+          ),
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="budget"
+        options={{
+          title: 'Budget',
+          tabBarIcon: ({ color, size }) => (
+            <BarChart3 size={20} color={color} />
+          ),
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="coach"
+        options={{
+          title: 'Coach',
+          tabBarIcon: ({ color, size }) => (
+            <BarChart3 size={20} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => (
+            <User size={20} color={color} />
+          ),
+          href: null,
         }}
       />
       <Tabs.Screen
         name="chat"
         options={{
-          href: null, // This hides the tab from the tab bar
+          href: null,
         }}
       />
     </Tabs>

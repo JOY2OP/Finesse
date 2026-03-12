@@ -1,8 +1,9 @@
+//🔴FILE NOT USED ANYWHERE CURRENTLY
 const express = require('express');
 const { supabase } = require('./supabase');
 
 const router = express.Router();
-//🔴FILE NOT USED ANYWHERE CURRENTLY
+
 // Send OTP to phone number
 router.post('/send-otp', async (req, res) => {
   try {
