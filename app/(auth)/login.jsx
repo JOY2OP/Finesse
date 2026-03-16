@@ -1,4 +1,5 @@
 import GradientBackground from '@/components/GradientBackground';
+import { BACKEND_URL } from '@/constants/config';
 import { colors, fontSizes, spacing } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -15,7 +16,6 @@ import {
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
-
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
