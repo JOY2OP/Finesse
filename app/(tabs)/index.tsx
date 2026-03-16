@@ -1,3 +1,4 @@
+import { useSMSTransactions } from '@/app/features/sms/useSMSTransactions';
 import GradientBackground from '@/components/GradientBackground';
 import LoadingBar from '@/components/Loading';
 import AddTransactionModal from '@/components/transactions/AddTransactionModal';
@@ -17,6 +18,13 @@ type Category = 'needs' | 'wants' | 'investing';
 
 export default function HomeScreen() {
   const { expenses, isLoading, handleCategoryChange, addExpense, updateExpense } = useTransactions();
+  const {
+    pendingTransaction,
+    showCategorizationModal,
+    dismissCategorization,
+    confirmCategorization,
+  } = useSMSTransactions();
+
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
@@ -35,10 +43,31 @@ export default function HomeScreen() {
   });
   const insets = useSafeAreaInsets();
 
-  const handleAddExpense = async () => {
-    const success = await addExpense(newExpense);
-    if (success) {
-      closeModal();
+  const handleAddExpense = async (expense?: NewExpense) => {
+    const success = await addExpense(expense ?? newExpense);
+    if (success) closeModal();
+  };
+
+  const handleEditSubmit = async (expense?: NewExpense) => {
+    if (!editingTransactionId) return;
+    const success = await updateExpense(editingTransactionId, expense ?? newExpense);
+    if (success) closeModal();
+  };
+
+  // SMS transaction: pre-fill from detected transaction, save on confirm
+  const smsExpense = pendingTransaction ? {
+    amount: String(pendingTransaction.amount),
+    category: 'needs' as const,
+    note: pendingTransaction.merchant ?? '',
+    date: pendingTransaction.date ?? new Date().toISOString().split('T')[0],
+    subcategory: '',
+  } : { amount: '', category: 'needs' as const, note: '', date: new Date().toISOString().split('T')[0], subcategory: '' };
+
+  const handleSMSExpenseSubmit = async (expense?: NewExpense) => {
+    if (!expense) return;
+    const success = await addExpense(expense);
+    if (success && pendingTransaction) {
+      confirmCategorization(pendingTransaction.id, expense.subcategory ?? 'other');
     }
   };
 
@@ -53,14 +82,6 @@ export default function HomeScreen() {
     setEditingTransactionId(transaction.id);
     setModalMode('edit');
     setModalVisible(true);
-  };
-
-  const handleEditSubmit = async () => {
-    if (!editingTransactionId) return;
-    const success = await updateExpense(editingTransactionId, newExpense);
-    if (success) {
-      closeModal();
-    }
   };
 
   const closeModal = () => {
@@ -232,6 +253,17 @@ export default function HomeScreen() {
           onSubmit={modalMode === 'edit' ? handleEditSubmit : handleAddExpense}
           mode={modalMode}
         />
+
+        {/* SMS auto-detected transaction modal */}
+        {pendingTransaction && (
+          <AddTransactionModal
+            visible={showCategorizationModal}
+            newExpense={smsExpense}
+            onClose={dismissCategorization}
+            onExpenseChange={() => {}}
+            onSubmit={() => handleSMSExpenseSubmit(smsExpense)}
+          />
+        )}
       </View>
     </GradientBackground>
   );

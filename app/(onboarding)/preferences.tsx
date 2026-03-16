@@ -6,12 +6,12 @@ import { useRouter } from 'expo-router';
 import { ArrowRight } from 'lucide-react-native';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -90,7 +90,7 @@ export default function PreferencesScreen() {
         }),
       });
 
-      const result = await response.json();
+      const result = await response.json() as { success: boolean; error?: string };
 
       if (!response.ok || !result.success) {
         throw new Error(result.error || 'Failed to save preferences');

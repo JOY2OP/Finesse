@@ -14,7 +14,7 @@ interface AddTransactionModalProps {
   newExpense: NewExpense;
   onClose: () => void;
   onExpenseChange: (expense: NewExpense) => void;
-  onSubmit: () => void;
+  onSubmit: (expense?: NewExpense) => void;
   mode?: 'add' | 'edit';
 }
 
@@ -64,23 +64,31 @@ export default function AddTransactionModal({
   mode = 'add',
 }: AddTransactionModalProps) {
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  // Internal category state so tabs always work regardless of onExpenseChange
+  const [internalExpense, setInternalExpense] = useState<NewExpense>(newExpense);
 
   useEffect(() => {
     if (visible) {
+      setInternalExpense(newExpense);
       setSelectedSubcategory(newExpense.subcategory ?? null);
     }
   }, [visible]);
 
+  const handleExpenseChange = (updated: NewExpense) => {
+    setInternalExpense(updated);
+    onExpenseChange(updated);
+  };
+
   const handleSubcategorySelect = (subcategoryId: string) => {
     setSelectedSubcategory(subcategoryId);
-    onExpenseChange({ ...newExpense, subcategory: subcategoryId });
+    handleExpenseChange({ ...internalExpense, subcategory: subcategoryId });
   };
 
   const handleConfirm = () => {
-    onSubmit();
+    onSubmit(internalExpense);
   };
 
-  const currentSubcategories = SUBCATEGORIES[newExpense.category];
+  const currentSubcategories = SUBCATEGORIES[internalExpense.category];
 
   // Pan responder for swipe down gesture
   const panResponder = PanResponder.create({
@@ -129,8 +137,8 @@ export default function AddTransactionModal({
                 placeholder="0.00"
                 placeholderTextColor="#CBD5E1"
                 keyboardType="numeric"
-                value={newExpense.amount}
-                onChangeText={(text) => onExpenseChange({ ...newExpense, amount: text })}
+                value={internalExpense.amount}
+                onChangeText={(text) => handleExpenseChange({ ...internalExpense, amount: text })}
               />
             </View>
 
@@ -139,15 +147,15 @@ export default function AddTransactionModal({
                 style={styles.noteInput}
                 placeholder="Note (optional)"
                 placeholderTextColor="#94A3B8"
-                value={newExpense.note}
-                onChangeText={(text) => onExpenseChange({ ...newExpense, note: text })}
+                value={internalExpense.note}
+                onChangeText={(text) => handleExpenseChange({ ...internalExpense, note: text })}
               />
               <TextInput
                 style={styles.dateInput}
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor="#94A3B8"
-                value={newExpense.date}
-                onChangeText={(text) => onExpenseChange({ ...newExpense, date: text })}
+                value={internalExpense.date}
+                onChangeText={(text) => handleExpenseChange({ ...internalExpense, date: text })}
               />
             </View>
           </View>
@@ -156,13 +164,13 @@ export default function AddTransactionModal({
           <View style={styles.categoryTabsContainer}>
             <View style={styles.categoryTabs}>
               {(['needs', 'wants', 'investing'] as const).map((cat) => {
-                const isActive = newExpense.category === cat;
+                const isActive = internalExpense.category === cat;
                 return (
                   <TouchableOpacity
                     key={cat}
                     style={[styles.categoryTab, isActive && styles.categoryTabActive]}
                     onPress={() => {
-                      onExpenseChange({ ...newExpense, category: cat, subcategory: undefined });
+                      handleExpenseChange({ ...internalExpense, category: cat, subcategory: undefined });
                       setSelectedSubcategory(null);
                     }}
                   >

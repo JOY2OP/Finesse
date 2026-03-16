@@ -13,13 +13,6 @@ export default function RootLayout() {
   const segments = useSegments();
 
   useEffect(() => {
-    // Bypass auth on web for debugging
-    // if (Platform.OS === 'web') {
-    //   setSession({ user: { id: 'web-debug-user' } } as any);
-    //   setInitialized(true);
-    //   return;
-    // }
-
     if (!supabase) return;
 
     supabase.auth.getSession().then(({ data: { session: s } }) => {
