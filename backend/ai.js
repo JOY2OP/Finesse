@@ -157,7 +157,7 @@ RULES:
 const emptyResult = () => ({
     status:          'OK',
     rankedCategories: [],
-    insights:        ['No transactions found for last month.'],
+    insights:        ['No data yet. Worry not! Check back after a month 😁'],
     spendingSplit:   [],
     summary:         'No spending data available for last month.',
     actions:         [],
@@ -302,20 +302,123 @@ router.get('/thisMonth', async (req, res) => {
             .select('action')
             .eq('user_id', user_id)
             .eq('month', currentMonthKey)
-            .single();
+            // .single();
 
-        if (error || !row) {
-            console.log('No actions found');
-            return res.json({ success: true, data: { challenges: [] } });
+        if(!row || row.length === 0){
+            const preferences = await fetchPreferences(user_id);
+            console.log(preferences)
+            const initialActions = await generateActionsFromPreferences(preferences);
+            console.log("initialActions:;;;", initialActions)
+            await supabase
+            .from('monthly_summary')
+            .insert({
+                user_id,
+                month: currentMonthKey,
+                summary: {
+                    status: 'Good',
+                    summary: `🚀 Welcome! Your ₹${preferences.monthly_income.toLocaleString('en-IN')} income plan is ready.`,
+                    insights: [
+                        `Your savings target is ₹${preferences.monthly_savings_target.toLocaleString('en-IN')}/month.`,
+                        `Keep daily spending under ₹${Math.round((preferences.monthly_income - preferences.monthly_savings_target) / 30).toLocaleString('en-IN')}.`,
+                        'Your emergency fund goal is set - transactions will track progress.',
+                        'Categorize your transactions to unlock personalized insights.',
+                    ],
+                    spendingSplit: [
+                        { category: 'Needs',   expected: '50%', actual: '0' },
+                        { category: 'Wants',   expected: '30%', actual: '0' },
+                        { category: 'Savings', expected: '20%', actual: '0' },
+                    ],
+                    rankedCategories: [],
+                },
+                action: initialActions,
+            });
+
+
+            return res.json({ success: true, data: { challenges: initialActions } });
+        }    
+
+        if (error) {
+            console.log('ERROR finding monthly summary');
+            return res.json({ success: false, data: { challenges: [] } });
         }
 
         console.log('✅ Found actions');
-        return res.json({ success: true, data: { challenges: row.action || [] } });
+        return res.json({ success: true, data: { challenges: row[0].action || [] } });
 
     } catch (err) {
         console.error('Unhandled error in /thisMonth:', err);
         res.status(500).json({ error: 'Failed to fetch this month data', details: err.message });
     }
 });
+
+async function fetchPreferences(user_id){
+    const {data, error} = await supabase
+        .from('preferences')
+        .select("*")
+        .eq('user_id', user_id)
+        .single();
+
+    if(error){
+        console.log("ERROR IN FETCHING PREFERENCES: ", error)
+    }else{
+        return data;
+    }
+}
+
+async function generateActionsFromPreferences(preferences){
+    const { monthly_income, monthly_savings_target, emergency_fund_target } = preferences;
+    const needsTarget   = Math.round(monthly_income * 0.50);
+    const wantsTarget   = Math.round(monthly_income * 0.30);
+    const action = [
+        {
+            type:     'encourage',
+            emoji:    '💰',
+            title:    'Hit Savings Target',
+            metric:   { target: monthly_savings_target, unit: 'currency' },
+            priority: 1,
+        },
+        {
+            type:     'maintain',
+            emoji:    '🏠',
+            title:    'Essentials Budget',
+            metric:   { target: needsTarget, unit: 'currency' },
+            priority: 2,
+        },
+        {
+            type:     'curb',
+            emoji:    '🛍️',
+            title:    'Wants Limit',
+            metric:   { target: wantsTarget, unit: 'currency' },
+            priority: 3,
+        },
+    ]
+    const coachsNote = [
+        `Your savings target is ₹${monthly_savings_target.toLocaleString('en-IN')}/month.`,
+        `Keep daily spending under ₹${Math.round((monthly_income - monthly_savings_target) / 30).toLocaleString('en-IN')}.`,
+        'Your emergency fund goal is set - transactions will track progress.',
+        'Categorize your transactions to unlock personalized insights.',
+    ]
+    return {action, coachsNote}
+}
+
+async function fetchThisMonthTransactions(){
+        const [rangeStart, rangeEnd] = getLastMonthRange();
+        // console.log('Fetching transactions:', rangeStart, '→', rangeEnd);
+
+        const { data: transactions, error: txError } = await supabase
+            .from('transactions')
+            .select('*')
+            .eq('user_id', user_id)
+            .gte('occured_at', rangeStart)
+            .lte('occured_at', rangeEnd)
+            .order('amount', { ascending: false });
+        
+        if(txError){
+            return txError;
+        }else{
+            return transactions
+        }
+        
+}
 
 module.exports = router;
