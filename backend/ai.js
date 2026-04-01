@@ -157,9 +157,9 @@ RULES:
 const emptyResult = () => ({
     status:          'OK',
     rankedCategories: [],
-    insights:        ['No data yet. Worry not! Check back after a month 😁'],
+    insights:        ['Categorize your transactions to unlock personalized insights.'],
     spendingSplit:   [],
-    summary:         'No spending data available for last month.',
+    summary:         '📊 Start categorizing your transactions to see your spending patterns.',
     actions:         [],
 });
 
@@ -293,57 +293,149 @@ router.get('/thisMonth', async (req, res) => {
 
         console.log('🎯 /thisMonth for user:', user_id);
 
-        // Actions for THIS month are stored with current month key
         const currentMonthKey = getCurrentMonthKey();
         console.log('Looking up actions from month key:', currentMonthKey);
 
         const { data: row, error } = await supabase
             .from('monthly_summary')
-            .select('action')
+            .select('action, summary')
             .eq('user_id', user_id)
-            .eq('month', currentMonthKey)
-            // .single();
+            .eq('month', currentMonthKey);
 
+        // ── New user: create initial actions from preferences ──
         if(!row || row.length === 0){
             const preferences = await fetchPreferences(user_id);
-            console.log(preferences)
-            const initialActions = await generateActionsFromPreferences(preferences);
-            console.log("initialActions:;;;", initialActions)
+            if (!preferences) {
+                return res.status(404).json({ error: 'User preferences not found' });
+            }
+            
+            console.log('Creating initial actions for new user');
+            const { action, coachsNote } = await generateActionsFromPreferences(preferences);
+            
             await supabase
-            .from('monthly_summary')
-            .insert({
-                user_id,
-                month: currentMonthKey,
-                summary: {
-                    status: 'Good',
-                    summary: `🚀 Welcome! Your ₹${preferences.monthly_income.toLocaleString('en-IN')} income plan is ready.`,
-                    insights: [
-                        `Your savings target is ₹${preferences.monthly_savings_target.toLocaleString('en-IN')}/month.`,
-                        `Keep daily spending under ₹${Math.round((preferences.monthly_income - preferences.monthly_savings_target) / 30).toLocaleString('en-IN')}.`,
-                        'Your emergency fund goal is set - transactions will track progress.',
-                        'Categorize your transactions to unlock personalized insights.',
-                    ],
+                .from('monthly_summary')
+                .insert({
+                    user_id,
+                    month: currentMonthKey,
+                    summary: {
+                        status: 'Good',
+                        summary: `🚀 Welcome! Your ₹${preferences.monthly_income.toLocaleString('en-IN')} income plan is ready.`,
+                        insights: coachsNote,
+                        spendingSplit: [
+                            { category: 'Needs',   expected: '50%', actual: '0%' },
+                            { category: 'Wants',   expected: '30%', actual: '0%' },
+                            { category: 'Savings', expected: '20%', actual: '0%' },
+                        ],
+                        rankedCategories: [],
+                    },
+                    action,
+                });
+
+            return res.json({ 
+                success: true, 
+                data: { 
+                    challenges: action,
                     spendingSplit: [
-                        { category: 'Needs',   expected: '50%', actual: '0' },
-                        { category: 'Wants',   expected: '30%', actual: '0' },
-                        { category: 'Savings', expected: '20%', actual: '0' },
+                        { category: 'Needs',   expected: '50%', actual: '0%' },
+                        { category: 'Wants',   expected: '30%', actual: '0%' },
+                        { category: 'Savings', expected: '20%', actual: '0%' },
                     ],
-                    rankedCategories: [],
-                },
-                action: initialActions,
+                    insights: coachsNote,
+                    summary: `🚀 Welcome! Your ₹${preferences.monthly_income.toLocaleString('en-IN')} income plan is ready.`,
+                } 
             });
-
-
-            return res.json({ success: true, data: { challenges: initialActions } });
         }    
 
         if (error) {
-            console.log('ERROR finding monthly summary');
+            console.log('ERROR finding monthly summary:', error);
             return res.json({ success: false, data: { challenges: [] } });
         }
 
-        console.log('✅ Found actions');
-        return res.json({ success: true, data: { challenges: row[0].action || [] } });
+        // ── Fetch this month's transactions for progress calculation ──
+        const transactions = await fetchThisMonthTransactions(user_id);
+        console.log(`Found ${transactions.length} transactions this month`);
+
+        // Calculate spending by category
+        const budgetSplit = transactions.reduce(
+            (acc, t) => {
+                const cat = (t.category || '').toLowerCase();
+                if (cat === 'needs')     acc.needs     += t.amount;
+                else if (cat === 'wants')    acc.wants     += t.amount;
+                else if (cat === 'investing') acc.investing += t.amount;
+                return acc;
+            },
+            { needs: 0, wants: 0, investing: 0 }
+        );
+
+        const totalSpent = budgetSplit.needs + budgetSplit.wants + budgetSplit.investing;
+
+        // Calculate spending split percentages
+        const spendingSplit = [
+            { category: 'Needs',   expected: '50%', actual: pct(budgetSplit.needs,     totalSpent) },
+            { category: 'Wants',   expected: '30%', actual: pct(budgetSplit.wants,     totalSpent) },
+            { category: 'Savings', expected: '20%', actual: pct(budgetSplit.investing, totalSpent) },
+        ];
+
+        // Map actions to challenges with progress
+        const actions = row[0].action || [];
+        const challenges = actions.map((action) => {
+            let currentSpend = 0;
+            let progress = 0;
+            let status = 'regular';
+            let statusText = '';
+
+            const target = action.metric?.target || 0;
+
+            // Match action to spending category
+            if (action.type === 'encourage' && action.title.toLowerCase().includes('saving')) {
+                currentSpend = budgetSplit.investing;
+            } else if (action.type === 'maintain' && action.title.toLowerCase().includes('essential')) {
+                currentSpend = budgetSplit.needs;
+            } else if (action.type === 'curb' && action.title.toLowerCase().includes('want')) {
+                currentSpend = budgetSplit.wants;
+            }
+
+            // Calculate progress
+            if (target > 0) {
+                progress = Math.min(Math.round((currentSpend / target) * 100), 100);
+                
+                if (action.type === 'encourage') {
+                    if (progress >= 100) {
+                        status = 'completed';
+                        statusText = 'Target Hit!';
+                    } else if (progress >= 75) {
+                        statusText = 'Almost there';
+                    }
+                } else if (action.type === 'curb') {
+                    if (progress >= 100) {
+                        status = 'warning';
+                        statusText = 'Over limit';
+                    } else if (progress >= 80) {
+                        status = 'warning';
+                        statusText = 'Near limit';
+                    }
+                }
+            }
+
+            return {
+                ...action,
+                progress,
+                status,
+                statusText,
+                currentSpend,
+            };
+        });
+
+        console.log('✅ Returning challenges with progress');
+        return res.json({ 
+            success: true, 
+            data: { 
+                challenges,
+                spendingSplit,
+                insights: row[0].summary?.insights || [],
+                summary: row[0].summary?.summary || '',
+            } 
+        });
 
     } catch (err) {
         console.error('Unhandled error in /thisMonth:', err);
@@ -376,6 +468,8 @@ async function generateActionsFromPreferences(preferences){
             title:    'Hit Savings Target',
             metric:   { target: monthly_savings_target, unit: 'currency' },
             priority: 1,
+            missionType: 'ENCOURAGE',
+            color: '#10B981',
         },
         {
             type:     'maintain',
@@ -383,6 +477,8 @@ async function generateActionsFromPreferences(preferences){
             title:    'Essentials Budget',
             metric:   { target: needsTarget, unit: 'currency' },
             priority: 2,
+            missionType: 'MAINTAIN',
+            color: '#0052FF',
         },
         {
             type:     'curb',
@@ -390,6 +486,8 @@ async function generateActionsFromPreferences(preferences){
             title:    'Wants Limit',
             metric:   { target: wantsTarget, unit: 'currency' },
             priority: 3,
+            missionType: 'CURB',
+            color: '#EF4444',
         },
     ]
     const coachsNote = [
@@ -401,9 +499,16 @@ async function generateActionsFromPreferences(preferences){
     return {action, coachsNote}
 }
 
-async function fetchThisMonthTransactions(){
-        const [rangeStart, rangeEnd] = getLastMonthRange();
-        // console.log('Fetching transactions:', rangeStart, '→', rangeEnd);
+/** Returns [start ISO, end ISO] of current month in UTC */
+const getCurrentMonthRange = () => {
+    const now   = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    return [start.toISOString(), end.toISOString()];
+};
+
+async function fetchThisMonthTransactions(user_id){
+        const [rangeStart, rangeEnd] = getCurrentMonthRange();
 
         const { data: transactions, error: txError } = await supabase
             .from('transactions')
@@ -414,11 +519,10 @@ async function fetchThisMonthTransactions(){
             .order('amount', { ascending: false });
         
         if(txError){
-            return txError;
-        }else{
-            return transactions
+            console.error('Error fetching this month transactions:', txError);
+            return [];
         }
-        
+        return transactions || [];
 }
 
 module.exports = router;

@@ -1,7 +1,8 @@
 import { useSMSTransactions } from '@/app/features/sms/useSMSTransactions';
+import { supabase } from '@/app/lib/supabase';
 import GradientBackground from '@/components/GradientBackground';
 import LoadingBar from '@/components/Loading';
-import AddTransactionModal from '@/components/transactions/AddTransactionModal';
+import AddTransactionModal, { NewExpense } from '@/components/transactions/AddTransactionModal';
 import CategoryFilter from '@/components/transactions/CategoryFilter';
 import TransactionGroup from '@/components/transactions/TransactionGroup';
 import TransactionSummary from '@/components/transactions/TransactionSummary';
@@ -200,6 +201,7 @@ export default function HomeScreen() {
           <TouchableOpacity style={styles.searchButton}>
             <SearchIcon size={20} color={colors.primary} />
           </TouchableOpacity>
+            <TouchableOpacity onPress={() => supabase?.auth.signOut()}><Text>Logout</Text></TouchableOpacity>
         </Animated.View>
         
         <ScrollView 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Modal, PanResponder, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-interface NewExpense {
+export interface NewExpense {
   amount: string;
   category: 'needs' | 'wants' | 'investing';
   note: string;
