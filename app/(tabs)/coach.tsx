@@ -34,14 +34,15 @@ export default function CoachTab() {
   const [thisMonthData, setThisMonthData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetchedData, setHasFetchedData] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (activeTab === 'lastMonth' && !hasFetchedData && !lastMonthData) {
       fetchLastMonthData();
-    } else if (activeTab === 'thisMonth' && !thisMonthData) {
+    } else if (activeTab === 'thisMonth') {
       fetchThisMonthData();
     }
-  }, [activeTab, hasFetchedData, lastMonthData, thisMonthData]);
+  }, [activeTab, hasFetchedData, lastMonthData, refreshKey]);
 
   const fetchLastMonthData = async () => {
     try {
@@ -63,7 +64,12 @@ export default function CoachTab() {
         return;
       }
 
-      const response = await fetch(`${BACKEND_URL}/ai/lastMonth?user_id=${user.id}`);
+      const response = await fetch(`${BACKEND_URL}/ai/lastMonth?user_id=${user.id}&t=${Date.now()}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
       const result: any = await response.json();
       
       if (result.success) {
@@ -102,8 +108,15 @@ export default function CoachTab() {
         return;
       }
 
-      const response = await fetch(`${BACKEND_URL}/ai/thisMonth?user_id=${user.id}`);
+      const response = await fetch(`${BACKEND_URL}/ai/thisMonth?user_id=${user.id}&t=${Date.now()}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
       const result: any = await response.json();
+      
+      console.log('📥 Raw API Response:', result);
       
       if (result.success) {
         const rawChallenges = result.data.challenges || [];
@@ -132,6 +145,9 @@ export default function CoachTab() {
             color,
           };
         });
+        
+        console.log('📊 Spending Split:', result.data.spendingSplit);
+        console.log('🎯 Challenges with progress:', challenges);
         
         setThisMonthData({
           challenges: challenges.length > 0 ? challenges : coachData.thisMonth.challenges,
@@ -162,13 +178,28 @@ export default function CoachTab() {
     }));
   };
 
+  const handleRefresh = () => {
+    console.log('🔄 Refreshing data...');
+    if (activeTab === 'thisMonth') {
+      setThisMonthData(null);
+      setRefreshKey(prev => prev + 1);
+    } else {
+      setLastMonthData(null);
+      setHasFetchedData(false);
+      setRefreshKey(prev => prev + 1);
+    }
+  };
+
   return (
     <GradientBackground>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Coach</Text>
-        {/* <TouchableOpacity style={styles.notificationButton}>
-          <Text style={styles.notificationIcon}>🔔</Text>
-        </TouchableOpacity> */}
+        <TouchableOpacity 
+          style={styles.notificationButton}
+          onPress={handleRefresh}
+        >
+          <Text style={styles.notificationIcon}>🔄</Text>
+        </TouchableOpacity>
       </View>
 
       {isLoading ? (

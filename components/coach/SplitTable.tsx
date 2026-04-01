@@ -86,8 +86,11 @@ export default function SplitTable({ data, caption }: SplitTableProps) {
   };
 
   const getStatus = (category: string, actual: string): 'good' | 'warning' | 'bad' => {
-    const actualNum = parseInt(actual);
+    // Remove % symbol if present and parse
+    const actualNum = parseInt(actual.replace('%', ''));
     const lower = category.toLowerCase();
+    
+    if (isNaN(actualNum)) return 'warning';
     
     if (lower.includes('want') && actualNum > 30) return 'bad';
     if (lower.includes('need') && actualNum < 50) return 'good';
