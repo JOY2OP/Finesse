@@ -7,9 +7,8 @@ import CategoryFilter from '@/components/transactions/CategoryFilter';
 import TransactionGroup from '@/components/transactions/TransactionGroup';
 import TransactionSummary from '@/components/transactions/TransactionSummary';
 import { useTransactions } from '@/components/transactions/useTransactions';
-import { colors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
-import { Plus, Search as SearchIcon } from 'lucide-react-native';
+import { Plus } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -198,10 +197,15 @@ export default function HomeScreen() {
             <Text style={styles.profileIcon}>👤</Text>
           </TouchableOpacity>
           <Text style={styles.logo}>Finesse</Text>
-          <TouchableOpacity style={styles.searchButton}>
+          {/* <TouchableOpacity style={styles.searchButton}>
             <SearchIcon size={20} color={colors.primary} />
-          </TouchableOpacity>
-            <TouchableOpacity onPress={() => supabase?.auth.signOut()}><Text>Logout</Text></TouchableOpacity>
+          </TouchableOpacity> */}
+            <TouchableOpacity 
+              style={styles.logout}
+              onPress={() => supabase?.auth.signOut()}
+            >
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
         </Animated.View>
         
         <ScrollView 
@@ -340,5 +344,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  logout: {
+    backgroundColor: '#FFEBEE',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutText: {
+    color: '#D32F2F',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

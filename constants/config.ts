@@ -1,6 +1,6 @@
 // Backend API Configuration
-export const BACKEND_URL = 'http://10.151.0.229:3000';
-
+// export const BACKEND_URL = 'http://10.151.0.229:3000';
+export const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 // Other app configuration can go here
 export const APP_CONFIG = {
   backendUrl: BACKEND_URL,
