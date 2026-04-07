@@ -34,14 +34,15 @@ export default function CoachTab() {
   const [thisMonthData, setThisMonthData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetchedData, setHasFetchedData] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (activeTab === 'lastMonth' && !hasFetchedData && !lastMonthData) {
       fetchLastMonthData();
-    } else if (activeTab === 'thisMonth' && !thisMonthData) {
+    } else if (activeTab === 'thisMonth') {
       fetchThisMonthData();
     }
-  }, [activeTab, hasFetchedData, lastMonthData, thisMonthData]);
+  }, [activeTab, hasFetchedData, lastMonthData, refreshKey]);
 
   const fetchLastMonthData = async () => {
     try {
@@ -63,8 +64,13 @@ export default function CoachTab() {
         return;
       }
 
-      const response = await fetch(`${BACKEND_URL}/ai/lastMonth?user_id=${user.id}`);
-      const result = await response.json();
+      const response = await fetch(`${BACKEND_URL}/ai/lastMonth?user_id=${user.id}&t=${Date.now()}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
+      const result: any = await response.json();
       
       if (result.success) {
         setLastMonthData(result.data);
@@ -102,21 +108,30 @@ export default function CoachTab() {
         return;
       }
 
-      const response = await fetch(`${BACKEND_URL}/ai/thisMonth?user_id=${user.id}`);
-      const result = await response.json();
+      const response = await fetch(`${BACKEND_URL}/ai/thisMonth?user_id=${user.id}&t=${Date.now()}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
+      const result: any = await response.json();
       
-      if (result.success && result.data.challenges.length > 0) {
-        // Transform actions to challenge format
-        const challenges = result.data.challenges.map((action: any, index: number) => {
-          const missionType = action.type === 'curb' ? 'CURB' : 
-                             action.type === 'encourage' ? 'ENCOURAGE' : 'MAINTAIN';
-          
-          const color = action.type === 'curb' ? '#EF4444' : 
-                       action.type === 'encourage' ? '#10B981' : '#0052FF';
-          
-          const target = action.metric.unit === 'currency' 
+      console.log('📥 Raw API Response:', result);
+      
+      if (result.success) {
+        const rawChallenges = result.data.challenges || [];
+        const challenges = rawChallenges.map((action: any, index: number) => {
+          const missionType = action.missionType || (
+            action.type === 'curb' ? 'CURB' : 
+            action.type === 'encourage' ? 'ENCOURAGE' : 'MAINTAIN'
+          );
+          const color = action.color || (
+            action.type === 'curb' ? '#EF4444' : 
+            action.type === 'encourage' ? '#10B981' : '#0052FF'
+          );
+          const target = action.metric?.unit === 'currency' 
             ? `₹${action.metric.target.toLocaleString('en-IN')}`
-            : `${action.metric.target}%`;
+            : `${action.metric?.target ?? 0}%`;
 
           return {
             id: index + 1,
@@ -124,15 +139,22 @@ export default function CoachTab() {
             missionType,
             title: action.title,
             amount: target,
-            progress: 0,
-            status: 'regular' as const,
+            progress: action.progress || 0,
+            status: action.status || 'regular',
+            statusText: action.statusText,
             color,
           };
         });
         
+        console.log('📊 Spending Split:', result.data.spendingSplit);
+        console.log('🎯 Challenges with progress:', challenges);
+        
         setThisMonthData({
-          ...coachData.thisMonth,
-          challenges
+          challenges: challenges.length > 0 ? challenges : coachData.thisMonth.challenges,
+          spendingSplit: result.data.spendingSplit || [],
+          insights: result.data.insights || coachData.thisMonth.insights,
+          summary: result.data.summary || coachData.thisMonth.summary,
+          status: 'Good',
         });
         console.log('✅ Fetched this month data:', challenges);
       } else {
@@ -156,13 +178,28 @@ export default function CoachTab() {
     }));
   };
 
+  const handleRefresh = () => {
+    console.log('🔄 Refreshing data...');
+    if (activeTab === 'thisMonth') {
+      setThisMonthData(null);
+      setRefreshKey(prev => prev + 1);
+    } else {
+      setLastMonthData(null);
+      setHasFetchedData(false);
+      setRefreshKey(prev => prev + 1);
+    }
+  };
+
   return (
     <GradientBackground>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Coach</Text>
-        {/* <TouchableOpacity style={styles.notificationButton}>
-          <Text style={styles.notificationIcon}>🔔</Text>
-        </TouchableOpacity> */}
+        <TouchableOpacity 
+          style={styles.notificationButton}
+          onPress={handleRefresh}
+        >
+          <Text style={styles.notificationIcon}>🔄</Text>
+        </TouchableOpacity>
       </View>
 
       {isLoading ? (
@@ -198,37 +235,39 @@ export default function CoachTab() {
 
           {isLastMonth && lastMonthData ? (
             <>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>TOP SPENDING</Text>
-              </View>
-
               {lastMonthData.rankedCategories && lastMonthData.rankedCategories.length > 0 ? (
-                <View style={styles.rankedCardsGrid}>
-                  {lastMonthData.rankedCategories[0] && (
-                    <View style={styles.fullWidthCard}>
-                      <RankedCard {...lastMonthData.rankedCategories[0]} isCenter />
-                    </View>
-                  )}
-                  <View style={styles.twoColumnRow}>
-                    {lastMonthData.rankedCategories[1] && (
-                      <View style={styles.halfCard}>
-                        <RankedCard {...lastMonthData.rankedCategories[1]} />
-                      </View>
-                    )}
-                    {lastMonthData.rankedCategories[2] && (
-                      <View style={styles.halfCard}>
-                        <RankedCard {...lastMonthData.rankedCategories[2]} />
-                      </View>
-                    )}
+                <>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>TOP SPENDING</Text>
                   </View>
-                </View>
-              ) : null}
 
-              {lastMonthData.spendingSplit && lastMonthData.spendingSplit.length > 0 ? (
-                <SplitTable
-                  data={lastMonthData.spendingSplit}
-                  caption="Your wants spending ate into your potential savings last month."
-                />
+                  <View style={styles.rankedCardsGrid}>
+                    {lastMonthData.rankedCategories[0] && (
+                      <View style={styles.fullWidthCard}>
+                        <RankedCard {...lastMonthData.rankedCategories[0]} isCenter />
+                      </View>
+                    )}
+                    <View style={styles.twoColumnRow}>
+                      {lastMonthData.rankedCategories[1] && (
+                        <View style={styles.halfCard}>
+                          <RankedCard {...lastMonthData.rankedCategories[1]} />
+                        </View>
+                      )}
+                      {lastMonthData.rankedCategories[2] && (
+                        <View style={styles.halfCard}>
+                          <RankedCard {...lastMonthData.rankedCategories[2]} />
+                        </View>
+                      )}
+                    </View>
+                  </View>
+
+                  {lastMonthData.spendingSplit && lastMonthData.spendingSplit.length > 0 && (
+                    <SplitTable
+                      data={lastMonthData.spendingSplit}
+                      caption="Your wants spending ate into your potential savings last month."
+                    />
+                  )}
+                </>
               ) : null}
 
               <View style={styles.coachNoteSection}>
@@ -245,15 +284,15 @@ export default function CoachTab() {
                   ))}
                 </View>
 
-                <TouchableOpacity style={styles.actionButton}>
-                  <Text style={styles.actionButtonText}>Generate Action Plan</Text>
-                </TouchableOpacity>
+                {lastMonthData.rankedCategories && lastMonthData.rankedCategories.length > 0 && (
+                  <TouchableOpacity style={styles.actionButton}>
+                    <Text style={styles.actionButtonText}>Generate Action Plan</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </>
           ) : thisMonthData ? (
             <>
-              {/* <StreakCard weeks={thisMonthData.streak || 3} /> */}
-
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>MONTHLY CHALLENGE BOARD</Text>
               </View>
@@ -278,12 +317,12 @@ export default function CoachTab() {
                 </View>
               )}
 
-              {thisMonthData.spendingSplit && thisMonthData.spendingSplit.length > 0 ? (
+              {thisMonthData.spendingSplit && thisMonthData.spendingSplit.length > 0 && (
                 <SplitTable
                   data={thisMonthData.spendingSplit}
                   caption={thisMonthData.summary}
                 />
-              ) : null}
+              )}
 
               <View style={styles.coachNoteSection}>
                 <View style={styles.coachNoteHeader}>
@@ -298,10 +337,6 @@ export default function CoachTab() {
                     <InsightBullet key={index} text={insight} icon={index === 0 ? '💡' : '🛒'} />
                   ))}
                 </View>
-
-                {/* <TouchableOpacity style={styles.actionButton}>
-                  <Text style={styles.actionButtonText}>Complete Missions</Text>
-                </TouchableOpacity> */}
               </View>
             </>
           ) : null}

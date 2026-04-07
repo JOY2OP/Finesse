@@ -17,7 +17,11 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.jman.finesseeas"
+      "package": "com.jman.finesseeas",
+      "permissions": [
+        "android.permission.READ_SMS",
+        "android.permission.RECEIVE_SMS"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -33,6 +37,15 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#6366F1",
+          "sounds": []
         }
       ]
     ],

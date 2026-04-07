@@ -109,7 +109,7 @@ export const coachData = {
       {
         id: 'invest',
         emoji: '💰',
-        missionType: 'MISSION: INVEST',
+        missionType: 'INVEST',
         title: 'Fixed Deposit',
         amount: '₹250',
         progress: 100,
@@ -119,7 +119,7 @@ export const coachData = {
       {
         id: 'groceries',
         emoji: '🛒',
-        missionType: 'MISSION: CURB SPEND',
+        missionType: 'CURB SPEND',
         title: 'Groceries',
         amount: '₹135',
         progress: 85,
@@ -130,7 +130,7 @@ export const coachData = {
       {
         id: 'realestate',
         emoji: '🏢',
-        missionType: 'MISSION: MAINTAIN',
+        missionType: 'MAINTAIN',
         title: 'Real Estate',
         amount: '₹120',
         progress: 40,

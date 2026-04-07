@@ -18,7 +18,7 @@ interface NewExpense {
   category: 'needs' | 'wants' | 'investing';
   note: string;
   date: string;
-  subcategory: string;
+  subcategory?: string;
 }
 
 // Log backend URL for debugging

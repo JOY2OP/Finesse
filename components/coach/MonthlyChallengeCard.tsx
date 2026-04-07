@@ -22,6 +22,9 @@ export default function MonthlyChallengeCard({
   statusText,
   color,
 }: MonthlyChallengeCardProps) {
+  // Ensure progress is a valid number between 0-100
+  const validProgress = Math.max(0, Math.min(100, progress || 0));
+
   const getStatusIcon = () => {
     if (status === 'completed') {
       return '✓';
@@ -65,7 +68,10 @@ export default function MonthlyChallengeCard({
           <View
             style={[
               styles.progressFill,
-              { width: `${progress}%`, backgroundColor: color },
+              { 
+                width: `${validProgress}%`, 
+                backgroundColor: color 
+              },
             ]}
           />
         </View>
@@ -74,14 +80,11 @@ export default function MonthlyChallengeCard({
             {getStatusIcon()}
           </Text>
         )}
-        {status === 'warning' && statusText && (
-          <Text style={styles.limitText}>{progress}% LIMIT</Text>
+        {status === 'warning' && (
+          <Text style={styles.limitText}>{validProgress}%</Text>
         )}
         {status === 'regular' && (
-          <View style={styles.regularStatus}>
-            <Text style={styles.regularIcon}>⟳</Text>
-            <Text style={styles.regularText}>Regular</Text>
-          </View>
+          <Text style={styles.regularPercentage}>{validProgress}%</Text>
         )}
       </View>
     </View>
@@ -173,20 +176,11 @@ const styles = StyleSheet.create({
   limitText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: '#EF4444',
   },
-  regularStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  regularIcon: {
-    fontSize: 12,
-    color: '#94A3B8',
-  },
-  regularText: {
+  regularPercentage: {
     fontSize: 10,
-    fontWeight: '500',
+    fontWeight: '700',
     color: '#94A3B8',
   },
 });
