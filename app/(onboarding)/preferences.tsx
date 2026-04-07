@@ -205,13 +205,13 @@ export default function PreferencesScreen() {
           </View>
 
           {/* Skip Option */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.skipButton}
             onPress={() => router.replace('/(tabs)')}
             disabled={isLoading}
           >
             <Text style={styles.skipButtonText}>Skip for now</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </Animated.View>
       </View>
     </GradientBackground>
