@@ -32,3 +32,7 @@
 Phones.jsx => Verify.jsx
 1. Enter Number => Press Button => Store Number => Navigate to Verify.jsx
 2. Enter OTP => Press OTP Verify => Navigate to Home.jsx if right otherwise dont
+
+---
+#Build dev
+```eas build --profile development --platform android```

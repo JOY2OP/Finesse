@@ -34,8 +34,9 @@ export default function TransactionSummary({ expenseTotals }: TransactionSummary
         
         <View style={styles.changeRow}>
           <View style={styles.changeBadge}>
-            <Text style={styles.changeIcon}>↗</Text>
-            <Text style={styles.changeText}>12%</Text>
+            {/* <Text style={styles.changeIcon}>↗</Text> */}
+            {/* <Text style={styles.changeText}>12%</Text> */}
+            <Text style={styles.changeText}>-</Text>
           </View>
           <Text style={styles.changeLabel}>vs last month</Text>
         </View>

@@ -70,8 +70,11 @@ const fetchMonthlySummary = async (user_id, monthKey) => {
 const saveMonthlySummary = async (user_id, monthKey, summary, action) => {
     const { error } = await supabase
         .from('monthly_summary')
-        .insert({ user_id, month: monthKey, summary, action });
-    if (error) console.error('⚠️ Failed to save summary:', error);
+        .upsert(
+            { user_id, month: monthKey, summary, action },
+            { onConflict: 'user_id, month' }
+        );
+    if (error) console.error('⚠️ Failed to save/upsert summary:', error);
 };
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
@@ -262,20 +265,24 @@ router.get('/lastMonth', async (req, res) => {
         const { user_id } = req.query;
         if (!user_id) return res.status(400).json({ error: 'user_id is required' });
 
+        const lastMonthKey = getLastMonthKey();
         const currentMonthKey = getCurrentMonthKey();
 
-        // Return cache if AI summary already exists for this month
-        const cached = await fetchMonthlySummary(user_id, currentMonthKey);
-        if (cached) {
+        // Return cache if AI summary already exists for the month being reviewed
+        const cached = await fetchMonthlySummary(user_id, lastMonthKey);
+        // Only return cache if it's a "full" review (contains ranked categories)
+        if (cached && cached.summary?.rankedCategories?.length > 0) {
             return res.json({ success: true, data: { ...cached.summary, actions: cached.action } });
         }
 
         // Fetch last month's transactions
         const transactions = await fetchTransactions(user_id, getLastMonthRange());
-        if (!transactions.length) {
+        
+        // Only show insights if there's enough data for a "full month" feel.
+        if (transactions.length < 5) {
             return res.json({ success: true, data: {
                 status: 'OK', rankedCategories: [], spendingSplit: [], actions: [],
-                insights: ['No data yet — check back after your first full month. 😁'],
+                insights: [],
                 summary: '📊 Start categorizing transactions to see your spending patterns.',
             }});
         }
@@ -304,8 +311,14 @@ router.get('/lastMonth', async (req, res) => {
             actions: aiContent?.actions?.length === 3 ? aiContent.actions : FALLBACK_ACTIONS,
         };
 
-        // Save or update summary
-        await saveMonthlySummary(user_id, currentMonthKey, result, result.actions);
+        // 1. Save the review data (Jan results) to Jan
+        await saveMonthlySummary(user_id, lastMonthKey, result, result.actions);
+        
+        // 2. Push the generated actions to Feb as current active challenges
+        // This ensures the "This Month" tab sees these AI-driven goals immediately.
+        const currentMonthData = await fetchMonthlySummary(user_id, currentMonthKey);
+        const currentSummary = currentMonthData?.summary || { summary: result.summary, insights: result.insights };
+        await saveMonthlySummary(user_id, currentMonthKey, currentSummary, result.actions);
 
         return res.json({ success: true, data: result });
 

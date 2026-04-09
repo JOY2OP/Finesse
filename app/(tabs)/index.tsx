@@ -7,6 +7,7 @@ import CategoryFilter from '@/components/transactions/CategoryFilter';
 import TransactionGroup from '@/components/transactions/TransactionGroup';
 import TransactionSummary from '@/components/transactions/TransactionSummary';
 import { useTransactions } from '@/components/transactions/useTransactions';
+import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { useState } from 'react';
@@ -104,6 +105,43 @@ export default function HomeScreen() {
     );
   };
 
+  const handleTestNotification = async () => {
+    try {
+      // Configure notification handler first
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        }),
+      });
+
+      // Request permissions
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Notification permission not granted');
+        return;
+      }
+
+      // Send notification
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "💸 Spent ₹500.00",
+          body: "at Food Court • A/C XX1234",
+          data: {
+            type: 'test_transaction',
+          },
+        },
+        trigger: null,
+      });
+      console.log('Test notification sent!');
+    } catch (error) {
+      console.error('Failed to send test notification:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <GradientBackground>
@@ -197,6 +235,14 @@ export default function HomeScreen() {
             <Text style={styles.profileIcon}>👤</Text>
           </TouchableOpacity>
           <Text style={styles.logo}>Finesse</Text>
+          {/* ---------TEST NOTIFICATION---------  */}
+          {/* <TouchableOpacity 
+            style={styles.testButton}
+            onPress={handleTestNotification}
+          >
+            <Text style={styles.testButtonText}>🔔</Text>
+          </TouchableOpacity> */}
+          {/* ------------------------------------ */}
           {/* <TouchableOpacity style={styles.searchButton}>
             <SearchIcon size={20} color={colors.primary} />
           </TouchableOpacity> */}
@@ -320,6 +366,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(43, 108, 238, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  testButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 193, 7, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  testButtonText: {
+    fontSize: 20,
   },
   transactionsContainer: {
     paddingHorizontal: 16,
