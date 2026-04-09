@@ -179,13 +179,13 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={styles.phoneButton}
               onPress={handlePhoneLogin}
               disabled={isLoading}
             >
               <Text style={styles.phoneButtonText}>Continue with Phone Number</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
 
           {/* Footer */}

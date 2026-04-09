@@ -9,6 +9,7 @@ import {
   setupNotificationCategories
 } from './notifications';
 import { parseTransactions } from './parser';
+import { SmsListenerSubscription, startRealtimeSMSListener } from './smsListener';
 import {
   hasSMSPermission,
   requestSMSPermission,
@@ -24,6 +25,7 @@ const STORAGE_KEY = 'pending_transactions';
  */
 class TransactionManager {
   private monitoringInterval: ReturnType<typeof setInterval> | null = null;
+  private realtimeListener: SmsListenerSubscription | null = null;
   private notificationListener: Notifications.Subscription | null = null;
   private pendingTransactions: Map<string, TransactionNotification> = new Map();
   private loaded = false;
@@ -109,8 +111,28 @@ class TransactionManager {
       return false;
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // 🔥 REAL-TIME SMS LISTENER (BroadcastReceiver)
+    // ═══════════════════════════════════════════════════════════════
+    if (!this.realtimeListener) {
+      console.log('[TM] 🚀 Starting REAL-TIME SMS listener (BroadcastReceiver)...');
+      this.realtimeListener = startRealtimeSMSListener(async (message) => {
+        console.log('[TM] 🔔 Real-time SMS received, processing...');
+        await this.processMessages([message]);
+      });
+
+      if (this.realtimeListener) {
+        console.log('[TM] ✅ Real-time listener is ACTIVE');
+      } else {
+        console.warn('[TM] ⚠️ Real-time listener failed to start');
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 📊 POLLING (Fallback + Initial Scan)
+    // ═══════════════════════════════════════════════════════════════
     if (this.monitoringInterval) {
-      console.log('[TM] Monitoring already running');
+      console.log('[TM] Polling already running');
       return true;
     }
 
@@ -125,16 +147,16 @@ class TransactionManager {
       console.error('[TM] Initial scan error:', e);
     }
 
-    // Poll for new messages — pass them directly to processMessages
+    // Poll for new messages as backup (in case real-time listener fails)
     this.monitoringInterval = startSMSMonitoring(
       async (newMessages) => {
-        console.log('[TM] Poll callback received', newMessages.length, 'new messages');
+        console.log('[TM] 📊 Poll callback received', newMessages.length, 'new messages');
         await this.processMessages(newMessages);
       },
       intervalMs
     );
 
-    console.log('[TM] Monitoring started, interval:', intervalMs, 'ms');
+    console.log('[TM] Monitoring started: Real-time listener + Polling backup (', intervalMs, 'ms)');
     return true;
   }
 
@@ -142,10 +164,18 @@ class TransactionManager {
    * Stop monitoring SMS
    */
   stopMonitoring(): void {
+    // Stop real-time listener
+    if (this.realtimeListener) {
+      this.realtimeListener.remove();
+      this.realtimeListener = null;
+      console.log('[TM] Real-time SMS listener stopped');
+    }
+
+    // Stop polling
     if (this.monitoringInterval) {
       stopSMSMonitoring(this.monitoringInterval);
       this.monitoringInterval = null;
-      console.log('SMS monitoring stopped');
+      console.log('[TM] SMS polling stopped');
     }
   }
 

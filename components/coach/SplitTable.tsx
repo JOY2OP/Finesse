@@ -13,8 +13,10 @@ type SplitTableRowProps = {
 function SplitTableRow({ category, goal, actual, status, color, isHeader }: SplitTableRowProps) {
   const getStatusIcon = () => {
     if (status === 'good') return '✓';
-    if (status === 'warning') return '↗';
-    return '↗';
+    if (status === 'warning') return '✓';
+    return '✓';
+    // if (status === 'warning') return '↗';
+    // return '↗';
   };
 
   const getStatusColor = () => {

@@ -34,15 +34,16 @@ export default function CoachTab() {
   const [thisMonthData, setThisMonthData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetchedData, setHasFetchedData] = useState(false);
+  const [hasFetchedThisMonth, setHasFetchedThisMonth] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (activeTab === 'lastMonth' && !hasFetchedData && !lastMonthData) {
       fetchLastMonthData();
-    } else if (activeTab === 'thisMonth') {
+    } else if (activeTab === 'thisMonth' && !hasFetchedThisMonth && !thisMonthData) {
       fetchThisMonthData();
     }
-  }, [activeTab, hasFetchedData, lastMonthData, refreshKey]);
+  }, [activeTab, hasFetchedData, hasFetchedThisMonth, lastMonthData, thisMonthData, refreshKey]);
 
   const fetchLastMonthData = async () => {
     try {
@@ -160,9 +161,11 @@ export default function CoachTab() {
       } else {
         setThisMonthData(coachData.thisMonth);
       }
+      setHasFetchedThisMonth(true);
     } catch (error) {
       console.error('Error fetching this month data:', error);
       setThisMonthData(coachData.thisMonth);
+      setHasFetchedThisMonth(true);
     } finally {
       setIsLoading(false);
     }
@@ -182,6 +185,7 @@ export default function CoachTab() {
     console.log('🔄 Refreshing data...');
     if (activeTab === 'thisMonth') {
       setThisMonthData(null);
+      setHasFetchedThisMonth(false);
       setRefreshKey(prev => prev + 1);
     } else {
       setLastMonthData(null);
@@ -270,26 +274,28 @@ export default function CoachTab() {
                 </>
               ) : null}
 
-              <View style={styles.coachNoteSection}>
-                <View style={styles.coachNoteHeader}>
-                  <View style={styles.coachIconContainer}>
-                    <Text style={styles.coachIcon}>✨</Text>
+              {lastMonthData.insights && lastMonthData.insights.length > 0 ? (
+                <View style={styles.coachNoteSection}>
+                  <View style={styles.coachNoteHeader}>
+                    <View style={styles.coachIconContainer}>
+                      <Text style={styles.coachIcon}>✨</Text>
+                    </View>
+                    <Text style={styles.coachNoteTitle}>Coach's Note</Text>
                   </View>
-                  <Text style={styles.coachNoteTitle}>Coach's Note</Text>
-                </View>
-                
-                <View style={styles.insightsContainer}>
-                  {lastMonthData.insights.map((insight: string, index: number) => (
-                    <InsightBullet key={index} text={insight} icon={index === 0 ? '💡' : '🛍️'} />
-                  ))}
-                </View>
+                  
+                  <View style={styles.insightsContainer}>
+                    {lastMonthData.insights.map((insight: string, index: number) => (
+                      <InsightBullet key={index} text={insight} icon={index === 0 ? '💡' : '🛍️'} />
+                    ))}
+                  </View>
 
-                {lastMonthData.rankedCategories && lastMonthData.rankedCategories.length > 0 && (
-                  <TouchableOpacity style={styles.actionButton}>
-                    <Text style={styles.actionButtonText}>Generate Action Plan</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+                  {lastMonthData.rankedCategories && lastMonthData.rankedCategories.length > 0 && (
+                    <TouchableOpacity style={styles.actionButton}>
+                      <Text style={styles.actionButtonText}>Generate Action Plan</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : null}
             </>
           ) : thisMonthData ? (
             <>

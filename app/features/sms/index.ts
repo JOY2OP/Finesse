@@ -6,6 +6,7 @@ export {
   setupNotificationCategories
 } from './notifications';
 export { isBankSMS, parseTransaction, parseTransactions } from './parser';
+export { isSmsListenerAvailable, startRealtimeSMSListener } from './smsListener';
 export {
   hasSMSPermission, readRecentSMS, readSMSMessages, requestSMSPermission
 } from './smsReader';

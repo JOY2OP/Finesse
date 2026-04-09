@@ -132,11 +132,11 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#94A3B8',
     textTransform: 'uppercase',
-    letterSpacing: -0.5,
+    // letterSpacing: -0.5,
     marginBottom: 2,
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#0F172A',
   },
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   amount: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '900',
     color: '#0F172A',
   },
