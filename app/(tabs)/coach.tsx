@@ -74,8 +74,15 @@ export default function CoachTab() {
       const result: any = await response.json();
       
       if (result.success) {
-        setLastMonthData(result.data);
-        console.log('✅ Fetched last month data:', result.data);
+        const mappedData = {
+          status: result.data.review_status || 'OK',
+          summary: result.data.review_summary,
+          insights: result.data.review_insights,
+          spendingSplit: result.data.review_spending_split,
+          rankedCategories: result.data.review_ranked_categories,
+        };
+        setLastMonthData(mappedData);
+        console.log('✅ Fetched last month data:', mappedData);
       } else {
         // Fallback to static data if API fails
         setLastMonthData(coachData.lastMonth);
@@ -155,7 +162,7 @@ export default function CoachTab() {
           spendingSplit: result.data.spendingSplit || [],
           insights: result.data.insights || coachData.thisMonth.insights,
           summary: result.data.summary || coachData.thisMonth.summary,
-          status: 'Good',
+          status: result.data.status || 'Good',
         });
         console.log('✅ Fetched this month data:', challenges);
       } else {
@@ -216,7 +223,7 @@ export default function CoachTab() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <Gauge status={currentData.status as 'OK' | 'Good' | 'Great'} />
+          <Gauge status={currentData.status as 'OK' | 'Good' | 'Great' | 'Excellent'} />
 
           <View style={styles.segmentedControl}>
             <TouchableOpacity
@@ -272,7 +279,11 @@ export default function CoachTab() {
                     />
                   )}
                 </>
-              ) : null}
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>No data yet - keep tracking this month to unlock your first review.</Text>
+                </View>
+              )}
 
               {lastMonthData.insights && lastMonthData.insights.length > 0 ? (
                 <View style={styles.coachNoteSection}>

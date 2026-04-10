@@ -4,7 +4,7 @@ const { supabase } = require('./supabase');
 require('dotenv').config();
 
 const router = express.Router();
-const ai = new GoogleGenAI({ apikey: process.env.GEMINI_API_KEY });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // ─── Date Helpers ────────────────────────────────────────────────────────────
 
@@ -38,7 +38,7 @@ const formatCategoryName = (cat) =>
 const pct = (part, total) =>
     total > 0 ? `${Math.round((part / total) * 100)}%` : '0%';
 
-const toInr = (n) => `₹${n.toLocaleString('en-IN')}`;
+const toInr = (n) => `₹${Math.round(n).toLocaleString('en-IN')}`;
 
 // ─── Supabase Queries ────────────────────────────────────────────────────────
 
@@ -67,34 +67,40 @@ const fetchMonthlySummary = async (user_id, monthKey) => {
     return error ? null : data;
 };
 
-const saveMonthlySummary = async (user_id, monthKey, summary, action) => {
-    const { error } = await supabase
+const saveMonthlySummary = async (user_id, monthKey, fields) => {
+    // First, try to update existing record
+    const { data: existing } = await supabase
         .from('monthly_summary')
-        .upsert(
-            { user_id, month: monthKey, summary, action },
-            { onConflict: 'user_id, month' }
-        );
-    if (error) console.error('⚠️ Failed to save/upsert summary:', error);
+        .select('id')
+        .eq('user_id', user_id)
+        .eq('month', monthKey)
+        .single();
+
+    if (existing) {
+        // Update existing record
+        const { error } = await supabase
+            .from('monthly_summary')
+            .update(fields)
+            .eq('user_id', user_id)
+            .eq('month', monthKey);
+        if (error) console.error('⚠️ Failed to update summary:', error);
+    } else {
+        // Insert new record
+        const { error } = await supabase
+            .from('monthly_summary')
+            .insert({ user_id, month: monthKey, ...fields });
+        if (error) console.error('⚠️ Failed to insert summary:', error);
+    }
 };
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
 
 const buildBudgetSplit = (transactions) => {
-    console.log('🔍 Processing transactions:', transactions.map(t => ({ 
-        amount: t.amount, 
-        category: t.category,
-        subcategory: t.subcategory 
-    })));
-    
     return transactions.reduce((acc, t) => {
             const cat = (t.category || '').toLowerCase().trim();
-            console.log(`  → Transaction: ${t.amount}, category: "${t.category}" → normalized: "${cat}"`);
-            
             if      (cat === 'needs')     acc.needs     += t.amount;
             else if (cat === 'wants')     acc.wants     += t.amount;
             else if (cat === 'investing' || cat === 'savings') acc.investing += t.amount;
-            else console.log(`  ⚠️ Unmatched category: "${cat}" (original: "${t.category}")`);
-            
             return acc;
         },
         { needs: 0, wants: 0, investing: 0 }
@@ -102,7 +108,6 @@ const buildBudgetSplit = (transactions) => {
 };
 
 const buildSpendingSplit = (budgetSplit, monthlyIncome) => {
-    // Calculate percentage of monthly income, not total spending
     const needsPct = monthlyIncome > 0 ? Math.round((budgetSplit.needs / monthlyIncome) * 100) : 0;
     const wantsPct = monthlyIncome > 0 ? Math.round((budgetSplit.wants / monthlyIncome) * 100) : 0;
     const savingsPct = monthlyIncome > 0 ? Math.round((budgetSplit.investing / monthlyIncome) * 100) : 0;
@@ -118,10 +123,7 @@ const buildSpendingStats = (transactions, monthlyIncome = 0) => {
     const budgetSplit  = buildBudgetSplit(transactions);
     const totalSpent   = budgetSplit.needs + budgetSplit.wants + budgetSplit.investing;
     
-    // Use monthly income if provided, otherwise fall back to total spent for percentage calculation
-    const spendingSplit = monthlyIncome > 0 
-        ? buildSpendingSplit(budgetSplit, monthlyIncome)
-        : buildSpendingSplit(budgetSplit, totalSpent);
+    const spendingSplit = buildSpendingSplit(budgetSplit, monthlyIncome);
 
     const categoryTotals = transactions.reduce((acc, t) => {
         const cat = t.subcategory || 'Other';
@@ -139,15 +141,13 @@ const buildSpendingStats = (transactions, monthlyIncome = 0) => {
         label:    ['Highest spend category', 'Second biggest drain', 'Smaller, but frequent'][i],
     }));
 
-    const savingsPct = totalSpent > 0 ? (budgetSplit.investing / totalSpent) * 100 : 0;
-    const status = savingsPct >= 20 ? 'Great' : savingsPct >= 15 ? 'Good' : 'OK';
-
-    return { totalSpent, sortedCategories, spendingSplit, rankedCategories, status, budgetSplit };
+    return { totalSpent, sortedCategories, spendingSplit, rankedCategories, budgetSplit };
 };
 
 // ─── AI ──────────────────────────────────────────────────────────────────────
 
-const generateAIContent = async ({ totalSpent, sortedCategories, spendingSplit }) => {
+const generateAIContent = async (stats) => {
+    const { totalSpent, sortedCategories, spendingSplit } = stats;
     const topCatsText = sortedCategories
         .map(([cat, amt], i) => `${i + 1}. ${formatCategoryName(cat)} ${toInr(amt)}`).join('\n');
 
@@ -162,20 +162,34 @@ ${topCatsText}
 
 RETURN THIS EXACT SCHEMA:
 {
-  "insights": ["<string under 15 words>", "<string>", "<string>", "<string>"],
-  "summary": "<one sentence starting with an emoji, under 20 words>",
-  "actions": [
-    { "type": "curb|encourage|maintain", "title": "<name>", "emoji": "<emoji>", "metric": { "target": <number>, "unit": "currency" }, "priority": <1|2|3> }
+  "review_status": "OK | Good | Great | Excellent",
+  "review_summary": "<emoji + one sentence under 20 words>",
+  "review_insights": ["<string>", "<string>", "<string>", "<string>"],
+  "review_ranked_categories": [
+    { "rank": 1, "category": "<name>", "amount": "₹<n>", "label": "Highest spend category" },
+    { "rank": 2, "category": "<name>", "amount": "₹<n>", "label": "Second biggest drain"   },
+    { "rank": 3, "category": "<name>", "amount": "₹<n>", "label": "Smaller, but frequent"  }
+  ],
+  "challenges": [
+    { "type": "curb|encourage|maintain", "emoji": "<emoji>", "title": "<name>", "metric": { "target": <number>, "unit": "currency" }, "priority": 1, "missionType": "CURB|ENCOURAGE|MAINTAIN" },
+    { "type": "curb|encourage|maintain", "emoji": "<emoji>", "title": "<name>", "metric": { "target": <number>, "unit": "currency" }, "priority": 2, "missionType": "CURB|ENCOURAGE|MAINTAIN" },
+    { "type": "curb|encourage|maintain", "emoji": "<emoji>", "title": "<name>", "metric": { "target": <number>, "unit": "currency" }, "priority": 3, "missionType": "CURB|ENCOURAGE|MAINTAIN" }
   ]
 }
 
 RULES:
-- insights: exactly 4 strings, each under 15 words, specific with numbers
-- summary: exactly 1 sentence, starts with emoji, under 20 words
-- actions: exactly 3 objects. curb → wants > 30%, target = 70-80% of last spend. encourage → savings < 20%. maintain → stable categories.
+- review_insights: exactly 4 strings, each under 15 words, specific with numbers
+- review_summary: exactly 1 sentence, starts with emoji, under 20 words
+- challenges: exactly 3 objects. 
+    curb → wants > 30% of income, target = 70–80% of last spend. 
+    encourage → savings < 20% of income. 
+    maintain → stable/healthy categories.
 - Return ONLY the JSON object.`;
 
-    const response = await ai.models.generateContent({ model: 'gemini-2.5-flash-lite', contents: prompt });
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-lite',
+        contents: prompt
+    });
     const raw = response.text.trim().replace(/^```json\s*/i, '').replace(/```$/i, '');
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) throw new Error('Gemini did not return valid JSON');
@@ -185,9 +199,9 @@ RULES:
 // ─── Defaults ────────────────────────────────────────────────────────────────
 
 const FALLBACK_ACTIONS = [
-    { type: 'curb',      title: 'Reduce top spending',    emoji: '🎯', metric: { target: 1000, unit: 'currency' }, priority: 1 },
-    { type: 'encourage', title: 'Increase savings',       emoji: '💰', metric: { target: 500,  unit: 'currency' }, priority: 2 },
-    { type: 'maintain',  title: 'Keep essentials steady', emoji: '✨', metric: { target: 2000, unit: 'currency' }, priority: 3 },
+    { type: 'curb',      emoji: '🛍️', title: 'Shopping',      metric: { target: 1000, unit: 'currency' }, priority: 1, missionType: 'CURB' },
+    { type: 'maintain',  emoji: '🛒', title: 'Groceries',     metric: { target: 1500, unit: 'currency' }, priority: 2, missionType: 'MAINTAIN' },
+    { type: 'encourage', emoji: '🏦', title: 'Fixed Deposit', metric: { target: 2000, unit: 'currency' }, priority: 3, missionType: 'ENCOURAGE' },
 ];
 
 const EMPTY_SPENDING_SPLIT = [
@@ -201,60 +215,39 @@ const EMPTY_SPENDING_SPLIT = [
 const buildOnboardingData = (preferences) => {
     const { monthly_income: income, monthly_savings_target: savingsTarget } = preferences;
 
-    const action = [
-        { type: 'encourage', emoji: '💰', title: 'Hit Savings Target', metric: { target: savingsTarget,                  unit: 'currency' }, priority: 1, missionType: 'ENCOURAGE', color: '#10B981' },
-        { type: 'maintain',  emoji: '🏠', title: 'Essentials Budget',  metric: { target: Math.round(income * 0.50),      unit: 'currency' }, priority: 2, missionType: 'MAINTAIN',  color: '#0052FF' },
-        { type: 'curb',      emoji: '🛍️', title: 'Wants Limit',        metric: { target: Math.round(income * 0.30),      unit: 'currency' }, priority: 3, missionType: 'CURB',      color: '#EF4444' },
+    const challenges = [
+        { type: 'encourage', emoji: '💰', title: 'Hit Savings Target', metric: { target: savingsTarget,                  unit: 'currency' }, priority: 1, missionType: 'ENCOURAGE' },
+        { type: 'maintain',  emoji: '🏠', title: 'Essentials Budget',  metric: { target: Math.round(income * 0.50),      unit: 'currency' }, priority: 2, missionType: 'MAINTAIN'  },
+        { type: 'curb',      emoji: '🛍️', title: 'Wants Limit',        metric: { target: Math.round(income * 0.30),      unit: 'currency' }, priority: 3, missionType: 'CURB'      },
     ];
 
-    const insights = [
-        `Your savings target is ${toInr(savingsTarget)}/month.`,
-        `Keep daily spending under ${toInr(Math.round((income - savingsTarget) / 30))}.`,
-        'Your emergency fund goal is set — transactions will track progress.',
-        'Categorize your transactions to unlock personalized insights.',
-    ];
-
-    const summary = {
-        status: 'Good',
-        summary: `🚀 Welcome! Your ${toInr(income)} income plan is ready.`,
-        insights,
-        spendingSplit: EMPTY_SPENDING_SPLIT,
-        rankedCategories: [],
-    };
-
-    return { action, insights, summary };
+    return challenges;
 };
 
 // ─── Challenge Progress ──────────────────────────────────────────────────────
 
-const attachProgress = (actions, budgetSplit) => {
-    console.log('🎯 Attaching progress to actions...');
-    console.log('   Budget Split:', budgetSplit);
-    
-    return actions.map((action) => {
-        const target = action.metric?.target || 0;
+const attachProgress = (challenges, budgetSplit) => {
+    return challenges.map((challenge) => {
+        const target = challenge.metric?.target || 0;
 
         const spendMap = {
             encourage: budgetSplit.investing,
             maintain:  budgetSplit.needs,
             curb:      budgetSplit.wants,
         };
-        const currentSpend = spendMap[action.type] ?? 0;
+        const currentSpend = spendMap[challenge.type] ?? 0;
         const progress     = target > 0 ? Math.min(Math.round((currentSpend / target) * 100), 100) : 0;
 
-        console.log(`   Action: ${action.title} (${action.type})`);
-        console.log(`     Target: ${target}, Current: ${currentSpend}, Progress: ${progress}%`);
-
         let status = 'regular', statusText = '';
-        if (action.type === 'encourage') {
+        if (challenge.type === 'encourage') {
             if (progress >= 100) { status = 'completed'; statusText = 'Target Hit!'; }
             else if (progress >= 75)  statusText = 'Almost there';
-        } else if (action.type === 'curb') {
+        } else if (challenge.type === 'curb') {
             if (progress >= 100) { status = 'warning'; statusText = 'Over limit'; }
             else if (progress >= 80) { status = 'warning'; statusText = 'Near limit'; }
         }
 
-        return { ...action, progress, status, statusText, currentSpend };
+        return { ...challenge, progress, status, statusText, currentSpend };
     });
 };
 
@@ -266,61 +259,86 @@ router.get('/lastMonth', async (req, res) => {
         if (!user_id) return res.status(400).json({ error: 'user_id is required' });
 
         const lastMonthKey = getLastMonthKey();
-        const currentMonthKey = getCurrentMonthKey();
 
-        // Return cache if AI summary already exists for the month being reviewed
+        // Fetch last month's row. If review_ranked_categories is not null → return cached, stop.
         const cached = await fetchMonthlySummary(user_id, lastMonthKey);
-        // Only return cache if it's a "full" review (contains ranked categories)
-        if (cached && cached.summary?.rankedCategories?.length > 0) {
-            return res.json({ success: true, data: { ...cached.summary, actions: cached.action } });
+        if (cached && cached.review_ranked_categories) {
+            return res.json({ 
+                success: true, 
+                data: { 
+                    review_status: cached.review_status,
+                    review_summary: cached.review_summary,
+                    review_insights: cached.review_insights,
+                    review_spending_split: cached.review_spending_split,
+                    review_ranked_categories: cached.review_ranked_categories
+                } 
+            });
         }
 
         // Fetch last month's transactions
         const transactions = await fetchTransactions(user_id, getLastMonthRange());
         
-        // Only show insights if there's enough data for a "full month" feel.
+        // If < 5 → return empty state, stop.
         if (transactions.length < 5) {
             return res.json({ success: true, data: {
-                status: 'OK', rankedCategories: [], spendingSplit: [], actions: [],
-                insights: [],
-                summary: '📊 Start categorizing transactions to see your spending patterns.',
+                review_status: null,
+                review_summary: 'No data yet — keep tracking this month to unlock your first review.',
+                review_insights: null,
+                review_spending_split: null,
+                review_ranked_categories: null
             }});
         }
 
-        // Fetch user preferences to get monthly income
+        // Fetch preferences for monthly_income.
         const preferences = await fetchPreferences(user_id);
         const monthlyIncome = preferences?.monthly_income || 0;
 
+        // Compute: buildSpendingStats → gets totalSpent, spendingSplit, rankedCategories, budgetSplit
         const stats = buildSpendingStats(transactions, monthlyIncome);
 
+        // Call Gemini to generate AI fields
         let aiContent = null;
         try { aiContent = await generateAIContent(stats); }
-        catch (e) { console.error('⚠️ AI generation failed:', e.message); }
+        catch (e) { 
+            console.error('⚠️ AI generation failed:', e.message);
+            // Fallback content
+            aiContent = {
+                review_status: 'OK',
+                review_summary: `💡 Last month you spent ${toInr(stats.totalSpent)} across ${transactions.length} transactions.`,
+                review_insights: [
+                    `Top category: ${stats.rankedCategories[0]?.category} at ${stats.rankedCategories[0]?.amount}.`,
+                    `Total spending: ${toInr(stats.totalSpent)}.`,
+                    `Wants: ${stats.spendingSplit[1].actual} of budget.`,
+                    `Savings rate: ${stats.spendingSplit[2].actual}.`,
+                ],
+                review_ranked_categories: stats.rankedCategories,
+                challenges: FALLBACK_ACTIONS
+            };
+        }
 
-        const result = {
-            status:          stats.status,
-            rankedCategories: stats.rankedCategories,
-            spendingSplit:   stats.spendingSplit,
-            insights: aiContent?.insights?.length ? aiContent.insights.slice(0, 4) : [
-                `Top category: ${stats.rankedCategories[0]?.category} at ${stats.rankedCategories[0]?.amount}.`,
-                `Total spending: ${toInr(stats.totalSpent)}.`,
-                `Wants: ${stats.spendingSplit[1].actual} of budget.`,
-                `Savings rate: ${stats.spendingSplit[2].actual}.`,
-            ],
-            summary: aiContent?.summary || `💡 Last month you spent ${toInr(stats.totalSpent)} across ${transactions.length} transactions.`,
-            actions: aiContent?.actions?.length === 3 ? aiContent.actions : FALLBACK_ACTIONS,
+        const finalFields = {
+            is_onboarding: false,
+            review_status: aiContent.review_status,
+            review_summary: aiContent.review_summary,
+            review_insights: aiContent.review_insights,
+            review_spending_split: stats.spendingSplit,
+            review_ranked_categories: aiContent.review_ranked_categories,
+            challenges: aiContent.challenges
         };
 
-        // 1. Save the review data (Jan results) to Jan
-        await saveMonthlySummary(user_id, lastMonthKey, result, result.actions);
-        
-        // 2. Push the generated actions to Feb as current active challenges
-        // This ensures the "This Month" tab sees these AI-driven goals immediately.
-        const currentMonthData = await fetchMonthlySummary(user_id, currentMonthKey);
-        const currentSummary = currentMonthData?.summary || { summary: result.summary, insights: result.insights };
-        await saveMonthlySummary(user_id, currentMonthKey, currentSummary, result.actions);
+        // Upsert to last month's row
+        await saveMonthlySummary(user_id, lastMonthKey, finalFields);
 
-        return res.json({ success: true, data: result });
+        return res.json({ 
+            success: true, 
+            data: {
+                review_status: finalFields.review_status,
+                review_summary: finalFields.review_summary,
+                review_insights: finalFields.review_insights,
+                review_spending_split: finalFields.review_spending_split,
+                review_ranked_categories: finalFields.review_ranked_categories
+            }
+        });
 
     } catch (err) {
         console.error('Unhandled error in /lastMonth:', err);
@@ -333,98 +351,56 @@ router.get('/thisMonth', async (req, res) => {
         const { user_id } = req.query;
         if (!user_id) return res.status(400).json({ error: 'user_id is required' });
 
+        const prevMonthKey = getLastMonthKey();
         const currentMonthKey = getCurrentMonthKey();
-        let row = await fetchMonthlySummary(user_id, currentMonthKey);
-
-        // New user — seed from preferences
-        if (!row) {
-            const preferences = await fetchPreferences(user_id);
-            if (!preferences) return res.status(404).json({ error: 'User preferences not found' });
-
-            const { action, insights, summary } = buildOnboardingData(preferences);
-            await saveMonthlySummary(user_id, currentMonthKey, summary, action);
-
-            return res.json({ success: true, data: {
-                challenges:   action,
-                spendingSplit: EMPTY_SPENDING_SPLIT,
-                insights,
-                summary: summary.summary,
-            }});
-        }
-
-        // Attach live progress to stored actions
-        const transactions = await fetchTransactions(user_id, getCurrentMonthRange());
-        console.log(`📊 Found ${transactions.length} transactions for current month`);
-        
-        if (transactions.length > 0) {
-            console.log('📝 Sample transaction:', JSON.stringify(transactions[0], null, 2));
-        }
-        
-        const budgetSplit  = buildBudgetSplit(transactions);
-        console.log('💰 Budget Split:', budgetSplit);
-        
-        // Fetch user preferences to get monthly income for percentage calculation
         const preferences = await fetchPreferences(user_id);
-        const monthlyIncome = preferences?.monthly_income || 0;
-        console.log('💵 Monthly Income:', monthlyIncome);
-        
-        const spendingSplit = buildSpendingSplit(budgetSplit, monthlyIncome);
-        console.log('📈 Spending Split:', spendingSplit);
-        
-        const challenges   = attachProgress(row.action || [], budgetSplit);
-        console.log('🎯 Challenges with progress:', challenges);
+        if (!preferences) return res.status(404).json({ error: 'User preferences not found' });
 
-        return res.json({ success: true, data: {
-            challenges,
-            spendingSplit,
-            insights: row.summary?.insights || [],
-            summary:  row.summary?.summary  || '',
-        }});
+        // Fetch prev month's row (last month key).
+        const prevRow = await fetchMonthlySummary(user_id, prevMonthKey);
+
+        let challenges;
+        // If no prev row or prev row is_onboarding: true → seed from preferences
+        if (!prevRow || prevRow.is_onboarding) {
+            challenges = buildOnboardingData(preferences);
+            // Upsert current month row with is_onboarding: true + seeded challenges
+            await saveMonthlySummary(user_id, currentMonthKey, {
+                is_onboarding: true,
+                challenges: challenges
+            });
+        } else {
+            // If prev row exists and has real challenges → use prev row's challenges
+            challenges = prevRow.challenges || [];
+        }
+
+        // Fetch current month's transactions.
+        const transactions = await fetchTransactions(user_id, getCurrentMonthRange());
+        const budgetSplit = buildBudgetSplit(transactions);
+        const monthlyIncome = preferences?.monthly_income || 0;
+        const spendingSplit = buildSpendingSplit(budgetSplit, monthlyIncome);
+
+        // Call attachProgress to add progress/status/statusText/currentSpend to each challenge.
+        const challengesWithProgress = attachProgress(challenges, budgetSplit);
+
+        return res.json({ 
+            success: true, 
+            data: {
+                challenges: challengesWithProgress,
+                spendingSplit: spendingSplit,
+                insights: prevRow?.review_insights || [
+                    `Your monthly income is ${toInr(monthlyIncome)}.`,
+                    `Target savings: ${toInr(preferences.monthly_savings_target)}.`,
+                    'Keep tracking your expenses to see live insights.',
+                    'New challenges will be generated at the start of next month.'
+                ],
+                summary: prevRow?.review_summary || `🚀 Welcome! Let's hit your ${toInr(monthlyIncome)} budget goal.`,
+                status: prevRow?.review_status || 'Good'
+            }
+        });
 
     } catch (err) {
         console.error('Unhandled error in /thisMonth:', err);
         res.status(500).json({ error: 'Failed to fetch this month data', details: err.message });
-    }
-});
-
-router.get('/debug/transactions', async (req, res) => {
-    try {
-        const { user_id } = req.query;
-        if (!user_id) return res.status(400).json({ error: 'user_id is required' });
-
-        const [rangeStart, rangeEnd] = getCurrentMonthRange();
-        const transactions = await fetchTransactions(user_id, [rangeStart, rangeEnd]);
-        const preferences = await fetchPreferences(user_id);
-        
-        const budgetSplit = buildBudgetSplit(transactions);
-        const monthlyIncome = preferences?.monthly_income || 0;
-        const spendingSplit = buildSpendingSplit(budgetSplit, monthlyIncome);
-        
-        return res.json({
-            success: true,
-            debug: {
-                dateRange: { start: rangeStart, end: rangeEnd },
-                transactionCount: transactions.length,
-                transactions: transactions.map(t => ({
-                    id: t.id,
-                    amount: t.amount,
-                    category: t.category,
-                    subcategory: t.subcategory,
-                    occured_at: t.occured_at,
-                })),
-                budgetSplit,
-                monthlyIncome,
-                spendingSplit,
-                calculation: {
-                    needsPercent: `${budgetSplit.needs} / ${monthlyIncome} = ${monthlyIncome > 0 ? Math.round((budgetSplit.needs / monthlyIncome) * 100) : 0}%`,
-                    wantsPercent: `${budgetSplit.wants} / ${monthlyIncome} = ${monthlyIncome > 0 ? Math.round((budgetSplit.wants / monthlyIncome) * 100) : 0}%`,
-                    savingsPercent: `${budgetSplit.investing} / ${monthlyIncome} = ${monthlyIncome > 0 ? Math.round((budgetSplit.investing / monthlyIncome) * 100) : 0}%`,
-                }
-            }
-        });
-    } catch (err) {
-        console.error('Debug error:', err);
-        res.status(500).json({ error: err.message });
     }
 });
 

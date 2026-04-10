@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 type GaugeProps = {
-  status: 'OK' | 'Good' | 'Great';
+  status: 'OK' | 'Good' | 'Great' | 'Excellent';
 };
 
 export default function Gauge({ status }: GaugeProps) {
@@ -10,6 +10,7 @@ export default function Gauge({ status }: GaugeProps) {
     OK: { color: '#F59E0B', label: 'OK' },
     Good: { color: '#10B981', label: 'Good' },
     Great: { color: '#0052FF', label: 'Great!' },
+    Excellent: { color: '#7C3AED', label: 'Excellent!' },
   };
 
   const config = statusConfig[status];
