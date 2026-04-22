@@ -47,7 +47,8 @@
           "color": "#6366F1",
           "sounds": []
         }
-      ]
+      ],
+      "./plugins/withSmsListener.js"
     ],
     "experiments": {
       "typedRoutes": true

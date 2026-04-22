@@ -107,7 +107,22 @@ export default function HomeScreen() {
 
   const handleTestNotification = async () => {
     try {
-      // Configure notification handler first
+      // Simulate native Kotlin notification system
+      // This mimics what SMSBroadcastReceiver.kt would send
+      
+      const testTransaction = {
+        amount: 500.00,
+        type: 'debit' as const,
+        merchant: 'Swiggy',
+        accountNumber: '1234',
+        rawMessage: 'Your A/C XX1234 debited by Rs. 500.00 at Swiggy on 20-Apr-26',
+        timestamp: Date.now(),
+      };
+
+      console.log('🧪 Test: Simulating native SMS notification...');
+      console.log('📱 Transaction:', testTransaction);
+
+      // Configure notification handler
       Notifications.setNotificationHandler({
         handleNotification: async () => ({
           shouldShowAlert: true,
@@ -121,24 +136,56 @@ export default function HomeScreen() {
       // Request permissions
       const { status } = await Notifications.requestPermissionsAsync();
       if (status !== 'granted') {
-        console.log('Notification permission not granted');
+        console.log('❌ Notification permission not granted');
         return;
       }
 
-      // Send notification
+      // Setup notification categories with action buttons (like native)
+      await Notifications.setNotificationCategoryAsync('transaction', [
+        {
+          identifier: 'categorize',
+          buttonTitle: 'Categorize',
+          options: {
+            opensAppToForeground: true,
+          },
+        },
+        {
+          identifier: 'ignore',
+          buttonTitle: 'Ignore',
+          options: {
+            opensAppToForeground: false,
+          },
+        },
+      ]);
+
+      // Send notification with action buttons (mimics native notification)
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: "💸 Spent ₹500.00",
-          body: "at Food Court • A/C XX1234",
+          title: `💸 Spent ₹${testTransaction.amount.toFixed(2)}`,
+          body: `at ${testTransaction.merchant} • A/C XX${testTransaction.accountNumber}`,
           data: {
-            type: 'test_transaction',
+            type: 'bank_transaction',
+            transactionId: `test-${testTransaction.timestamp}`,
+            transaction: JSON.stringify({
+              id: `test-${testTransaction.timestamp}`,
+              amount: testTransaction.amount,
+              type: testTransaction.type,
+              merchant: testTransaction.merchant,
+              accountNumber: testTransaction.accountNumber,
+              timestamp: testTransaction.timestamp,
+              rawMessage: testTransaction.rawMessage,
+            }),
           },
+          categoryIdentifier: 'transaction',
+          sound: true,
         },
         trigger: null,
       });
-      console.log('Test notification sent!');
+
+      console.log('✅ Test notification sent with action buttons!');
+      console.log('💡 Tap "Categorize" to test the modal flow');
     } catch (error) {
-      console.error('Failed to send test notification:', error);
+      console.error('❌ Failed to send test notification:', error);
     }
   };
 
