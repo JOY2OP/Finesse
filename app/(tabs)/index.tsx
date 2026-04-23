@@ -10,7 +10,7 @@ import { useTransactions } from '@/components/transactions/useTransactions';
 import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -56,19 +56,58 @@ export default function HomeScreen() {
   };
 
   // SMS transaction: pre-fill from detected transaction, save on confirm
-  const smsExpense = pendingTransaction ? {
-    amount: String(pendingTransaction.amount),
-    category: 'needs' as const,
-    note: pendingTransaction.merchant ?? '',
-    date: pendingTransaction.date ?? new Date().toISOString().split('T')[0],
+  const [smsExpense, setSmsExpense] = useState<{
+    amount: string;
+    category: 'needs' | 'wants' | 'investing';
+    note: string;
+    date: string;
+    subcategory?: string;
+  }>({
+    amount: '',
+    category: 'needs',
+    note: '',
+    date: new Date().toISOString().split('T')[0],
     subcategory: '',
-  } : { amount: '', category: 'needs' as const, note: '', date: new Date().toISOString().split('T')[0], subcategory: '' };
+  });
+
+  // Update smsExpense when pendingTransaction changes
+  useEffect(() => {
+    if (pendingTransaction) {
+      console.log('📱 [HomeScreen] Pending transaction received:', {
+        id: pendingTransaction.id,
+        amount: pendingTransaction.amount,
+        type: pendingTransaction.type,
+        merchant: pendingTransaction.merchant,
+        accountNumber: pendingTransaction.accountNumber,
+      });
+      setSmsExpense({
+        amount: String(pendingTransaction.amount),
+        category: 'needs',
+        note: pendingTransaction.merchant ?? '',
+        date: pendingTransaction.date ?? new Date().toISOString().split('T')[0],
+        subcategory: '',
+      });
+    }
+  }, [pendingTransaction]);
+
+  // Log when modal visibility changes
+  useEffect(() => {
+    console.log('🔔 [HomeScreen] SMS Modal visibility:', showCategorizationModal);
+  }, [showCategorizationModal]);
 
   const handleSMSExpenseSubmit = async (expense?: NewExpense) => {
     if (!expense) return;
     const success = await addExpense(expense);
     if (success && pendingTransaction) {
       confirmCategorization(pendingTransaction.id, expense.subcategory ?? 'other');
+      // Reset SMS expense state
+      setSmsExpense({
+        amount: '',
+        category: 'needs',
+        note: '',
+        date: new Date().toISOString().split('T')[0],
+        subcategory: '',
+      });
     }
   };
 
@@ -359,7 +398,7 @@ export default function HomeScreen() {
             visible={showCategorizationModal}
             newExpense={smsExpense}
             onClose={dismissCategorization}
-            onExpenseChange={() => {}}
+            onExpenseChange={setSmsExpense}
             onSubmit={() => handleSMSExpenseSubmit(smsExpense)}
           />
         )}

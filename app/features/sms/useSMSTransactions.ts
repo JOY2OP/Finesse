@@ -26,12 +26,22 @@ export function useSMSTransactions(): SMSTransactionState {
    * Check for pending transaction from native bridge
    */
   const checkNativePendingTransaction = useCallback(async () => {
+    console.log('[useSMSTransactions] Checking native bridge availability...');
+    console.log('[useSMSTransactions] NativeModules:', Object.keys(require('react-native').NativeModules));
+    console.log('[useSMSTransactions] TransactionModule exists?', !!require('react-native').NativeModules.TransactionModule);
+    
     if (!NativeTransactionBridge.isAvailable()) {
+      console.log('[useSMSTransactions] ❌ Native bridge not available');
+      console.log('[useSMSTransactions] Platform:', require('react-native').Platform.OS);
       return;
     }
 
+    console.log('[useSMSTransactions] ✅ Native bridge available, getting pending transaction...');
+
     try {
       const nativeTransaction = await NativeTransactionBridge.getPendingTransaction();
+      
+      console.log('[useSMSTransactions] Native bridge response:', nativeTransaction);
       
       if (nativeTransaction) {
         console.log('[useSMSTransactions] 🔔 Native transaction received:', nativeTransaction);
@@ -45,6 +55,7 @@ export function useSMSTransactions(): SMSTransactionState {
           accountNumber: nativeTransaction.accountNumber || undefined,
           timestamp: nativeTransaction.timestamp,
           rawMessage: nativeTransaction.rawMessage,
+          date: new Date(nativeTransaction.timestamp).toISOString().split('T')[0],
         };
         
         setPendingTransaction(transaction);
@@ -52,6 +63,8 @@ export function useSMSTransactions(): SMSTransactionState {
         
         // Clear the native transaction
         await NativeTransactionBridge.clearPendingTransaction();
+      } else {
+        console.log('[useSMSTransactions] No pending transaction from native bridge');
       }
     } catch (error) {
       console.error('[useSMSTransactions] Error checking native transaction:', error);
@@ -80,17 +93,21 @@ export function useSMSTransactions(): SMSTransactionState {
       await checkNativePendingTransaction();
 
       // Listen for notification responses (Categorize tap)
-      notifSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      notifSubscription = Notifications.addNotificationResponseReceivedListener(async (response) => {
         const { actionIdentifier, notification } = response;
         const data = notification.request.content.data;
 
-        if (data?.type !== 'bank_transaction') return;
+        console.log('[useSMSTransactions] Notification response:', actionIdentifier, data?.type);
 
-        if (actionIdentifier === 'categorize') {
+        // Check native bridge first (for Kotlin notifications)
+        await checkNativePendingTransaction();
+
+        // Then check JS notification data (for test button)
+        if (data?.type === 'bank_transaction' && actionIdentifier === 'categorize') {
           const transaction = JSON.parse(data.transaction as string) as ParsedTransaction;
           setPendingTransaction(transaction);
           setShowCategorizationModal(true);
-        } else if (actionIdentifier === 'ignore') {
+        } else if (data?.type === 'bank_transaction' && actionIdentifier === 'ignore') {
           transactionManager.removePendingTransaction(data.transactionId as string);
         }
       });

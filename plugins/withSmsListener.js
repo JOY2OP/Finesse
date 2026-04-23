@@ -556,24 +556,31 @@ function withSmsListener(config) {
         // Add import if not present
         if (!mainAppContent.includes('import com.jman.finesseeas.TransactionPackage')) {
           mainAppContent = mainAppContent.replace(
-            /(package com\.jman\.finesseeas)/,
-            `$1\n\nimport com.jman.finesseeas.TransactionPackage`
+            /package com\.jman\.finesseeas/,
+            `package com.jman.finesseeas\n\nimport com.jman.finesseeas.TransactionPackage`
           );
         }
         
         // Add package to getPackages() if not present
         if (!mainAppContent.includes('TransactionPackage()')) {
-          mainAppContent = mainAppContent.replace(
-            /(override fun getPackages\\(\\): List<ReactPackage> =\\s*PackageList\\(this\\)\\.packages\\.apply \\{[^}]*)/,
-            `$1\n          add(TransactionPackage())`
-          );
+          if (mainAppContent.includes('val packages = PackageList(this).packages')) {
+            mainAppContent = mainAppContent.replace(
+              /val packages = PackageList\(this\)\.packages/,
+              `val packages = PackageList(this).packages\n            packages.add(TransactionPackage())`
+            );
+          } else if (mainAppContent.includes('PackageList(this).packages.apply {')) {
+            mainAppContent = mainAppContent.replace(
+              /PackageList\(this\)\.packages\.apply \{/,
+              `PackageList(this).packages.apply {\n          add(TransactionPackage())`
+            );
+          }
         }
         
         fs.writeFileSync(mainAppPath, mainAppContent, 'utf-8');
         console.log('✅ Modified: MainApplication.kt');
       }
       
-      // Modify MainActivity.kt to pass intent to TransactionModule
+      // Modify MainActivity.kt to handle onNewIntent
       const mainActivityPath = path.join(androidProjectPath, 'MainActivity.kt');
       if (fs.existsSync(mainActivityPath)) {
         let mainActivityContent = fs.readFileSync(mainActivityPath, 'utf-8');
@@ -581,39 +588,21 @@ function withSmsListener(config) {
         // Add import if not present
         if (!mainActivityContent.includes('import android.content.Intent')) {
           mainActivityContent = mainActivityContent.replace(
-            /(package com\.jman\.finesseeas)/,
-            `$1\n\nimport android.content.Intent\nimport com.facebook.react.ReactInstanceManager`
+            /package com\.jman\.finesseeas/,
+            `package com.jman.finesseeas\n\nimport android.content.Intent`
           );
         }
         
         // Add onNewIntent override if not present
         if (!mainActivityContent.includes('override fun onNewIntent')) {
           const onNewIntentMethod = `
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        
-        // Pass intent to TransactionModule
-        reactInstanceManager?.currentReactContext?.let { context ->
-            val module = context.getNativeModule(TransactionModule::class.java)
-            module?.setIntent(intent)
-        }
-    }
-    
-    override fun onResume() {
-        super.onResume()
-        
-        // Pass intent to TransactionModule on resume
-        reactInstanceManager?.currentReactContext?.let { context ->
-            val module = context.getNativeModule(TransactionModule::class.java)
-            module?.setIntent(intent)
-        }
-    }`;
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+  }`;
           
-          mainActivityContent = mainActivityContent.replace(
-            /(class MainActivity : ReactActivity\\(\\) \\{[^}]*)(\\}\\s*$)/s,
-            `$1\n${onNewIntentMethod}\n$2`
-          );
+          // Insert before the last closing brace
+          mainActivityContent = mainActivityContent.replace(/(\}\s*$)/, `\n${onNewIntentMethod}\n$1`);
         }
         
         fs.writeFileSync(mainActivityPath, mainActivityContent, 'utf-8');
