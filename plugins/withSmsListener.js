@@ -41,7 +41,7 @@ class SMSBroadcastReceiver : BroadcastReceiver() {
         )
         
         private val DEBIT_PATTERN = Pattern.compile(
-            "(?:debited|paid|debit|spent|withdrawn|purchase|transferred)",
+            "(?:debited|paid|paid thru|thru|debit|spent|withdrawn|purchase|transferred)",
             Pattern.CASE_INSENSITIVE
         )
         
@@ -51,7 +51,7 @@ class SMSBroadcastReceiver : BroadcastReceiver() {
         )
         
         private val MERCHANT_PATTERN = Pattern.compile(
-            "(?:to|at|from)\\\\s+([A-Za-z0-9\\\\s&.-]+?)(?:\\\\s*,|\\\\s*UPI|\\\\s*on|\\\\s*\\\\.|$)",
+            "(?:to|at|from)\\s+([A-Za-z\\s&.-]+?)(?=\\s*(?:Rs\\.?|INR|₹|\\d|,|\\s*,|\\s*UPI|\\s*on|\\s*\\.|A/C|account|$))",
             Pattern.CASE_INSENSITIVE
         )
         

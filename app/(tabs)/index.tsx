@@ -55,61 +55,29 @@ export default function HomeScreen() {
     if (success) closeModal();
   };
 
-  // SMS transaction: pre-fill from detected transaction, save on confirm
-  const [smsExpense, setSmsExpense] = useState<{
-    amount: string;
-    category: 'needs' | 'wants' | 'investing';
-    note: string;
-    date: string;
-    subcategory?: string;
-  }>({
-    amount: '',
-    category: 'needs',
-    note: '',
-    date: new Date().toISOString().split('T')[0],
+  // SMS transaction initial values
+  const smsInitialExpense = pendingTransaction ? {
+    amount: String(pendingTransaction.amount),
+    category: 'needs' as const,
+    note: pendingTransaction.merchant ?? '',
+    date: pendingTransaction.date ?? new Date().toISOString().split('T')[0],
     subcategory: '',
-  });
-
-  // Update smsExpense when pendingTransaction changes
-  useEffect(() => {
-    if (pendingTransaction) {
-      console.log('📱 [HomeScreen] Pending transaction received:', {
-        id: pendingTransaction.id,
-        amount: pendingTransaction.amount,
-        type: pendingTransaction.type,
-        merchant: pendingTransaction.merchant,
-        accountNumber: pendingTransaction.accountNumber,
-      });
-      setSmsExpense({
-        amount: String(pendingTransaction.amount),
-        category: 'needs',
-        note: pendingTransaction.merchant ?? '',
-        date: pendingTransaction.date ?? new Date().toISOString().split('T')[0],
-        subcategory: '',
-      });
-    }
-  }, [pendingTransaction]);
-
-  // Log when modal visibility changes
-  useEffect(() => {
-    console.log('🔔 [HomeScreen] SMS Modal visibility:', showCategorizationModal);
-  }, [showCategorizationModal]);
+  } : null;
 
   const handleSMSExpenseSubmit = async (expense?: NewExpense) => {
     if (!expense) return;
     const success = await addExpense(expense);
     if (success && pendingTransaction) {
       confirmCategorization(pendingTransaction.id, expense.subcategory ?? 'other');
-      // Reset SMS expense state
-      setSmsExpense({
-        amount: '',
-        category: 'needs',
-        note: '',
-        date: new Date().toISOString().split('T')[0],
-        subcategory: '',
-      });
     }
   };
+
+  // Log when modal visibility changes
+  useEffect(() => {
+    if (showCategorizationModal) {
+      console.log('🔔 [HomeScreen] SMS Modal opening with data:', smsInitialExpense);
+    }
+  }, [showCategorizationModal, smsInitialExpense]);
 
   const handleEditTransaction = (transaction: { id: string; description: string; category: string; subcategory?: string; amount: number; date: string }) => {
     setNewExpense({
@@ -393,13 +361,14 @@ export default function HomeScreen() {
         />
 
         {/* SMS auto-detected transaction modal */}
-        {pendingTransaction && (
+        {pendingTransaction && smsInitialExpense && (
           <AddTransactionModal
+            key={pendingTransaction.id}
             visible={showCategorizationModal}
-            newExpense={smsExpense}
+            newExpense={smsInitialExpense}
             onClose={dismissCategorization}
-            onExpenseChange={setSmsExpense}
-            onSubmit={() => handleSMSExpenseSubmit(smsExpense)}
+            onExpenseChange={() => {}}
+            onSubmit={handleSMSExpenseSubmit}
           />
         )}
       </View>
