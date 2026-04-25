@@ -10,7 +10,7 @@ import { useTransactions } from '@/components/transactions/useTransactions';
 import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -55,14 +55,14 @@ export default function HomeScreen() {
     if (success) closeModal();
   };
 
-  // SMS transaction: pre-fill from detected transaction, save on confirm
-  const smsExpense = pendingTransaction ? {
+  // SMS transaction initial values
+  const smsInitialExpense = pendingTransaction ? {
     amount: String(pendingTransaction.amount),
     category: 'needs' as const,
     note: pendingTransaction.merchant ?? '',
     date: pendingTransaction.date ?? new Date().toISOString().split('T')[0],
     subcategory: '',
-  } : { amount: '', category: 'needs' as const, note: '', date: new Date().toISOString().split('T')[0], subcategory: '' };
+  } : null;
 
   const handleSMSExpenseSubmit = async (expense?: NewExpense) => {
     if (!expense) return;
@@ -71,6 +71,13 @@ export default function HomeScreen() {
       confirmCategorization(pendingTransaction.id, expense.subcategory ?? 'other');
     }
   };
+
+  // Log when modal visibility changes
+  useEffect(() => {
+    if (showCategorizationModal) {
+      console.log('🔔 [HomeScreen] SMS Modal opening with data:', smsInitialExpense);
+    }
+  }, [showCategorizationModal, smsInitialExpense]);
 
   const handleEditTransaction = (transaction: { id: string; description: string; category: string; subcategory?: string; amount: number; date: string }) => {
     setNewExpense({
@@ -107,7 +114,22 @@ export default function HomeScreen() {
 
   const handleTestNotification = async () => {
     try {
-      // Configure notification handler first
+      // Simulate native Kotlin notification system
+      // This mimics what SMSBroadcastReceiver.kt would send
+      
+      const testTransaction = {
+        amount: 500.00,
+        type: 'debit' as const,
+        merchant: 'Swiggy',
+        accountNumber: '1234',
+        rawMessage: 'Your A/C XX1234 debited by Rs. 500.00 at Swiggy on 20-Apr-26',
+        timestamp: Date.now(),
+      };
+
+      console.log('🧪 Test: Simulating native SMS notification...');
+      console.log('📱 Transaction:', testTransaction);
+
+      // Configure notification handler
       Notifications.setNotificationHandler({
         handleNotification: async () => ({
           shouldShowAlert: true,
@@ -121,24 +143,56 @@ export default function HomeScreen() {
       // Request permissions
       const { status } = await Notifications.requestPermissionsAsync();
       if (status !== 'granted') {
-        console.log('Notification permission not granted');
+        console.log('❌ Notification permission not granted');
         return;
       }
 
-      // Send notification
+      // Setup notification categories with action buttons (like native)
+      await Notifications.setNotificationCategoryAsync('transaction', [
+        {
+          identifier: 'categorize',
+          buttonTitle: 'Categorize',
+          options: {
+            opensAppToForeground: true,
+          },
+        },
+        {
+          identifier: 'ignore',
+          buttonTitle: 'Ignore',
+          options: {
+            opensAppToForeground: false,
+          },
+        },
+      ]);
+
+      // Send notification with action buttons (mimics native notification)
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: "💸 Spent ₹500.00",
-          body: "at Food Court • A/C XX1234",
+          title: `💸 Spent ₹${testTransaction.amount.toFixed(2)}`,
+          body: `at ${testTransaction.merchant} • A/C XX${testTransaction.accountNumber}`,
           data: {
-            type: 'test_transaction',
+            type: 'bank_transaction',
+            transactionId: `test-${testTransaction.timestamp}`,
+            transaction: JSON.stringify({
+              id: `test-${testTransaction.timestamp}`,
+              amount: testTransaction.amount,
+              type: testTransaction.type,
+              merchant: testTransaction.merchant,
+              accountNumber: testTransaction.accountNumber,
+              timestamp: testTransaction.timestamp,
+              rawMessage: testTransaction.rawMessage,
+            }),
           },
+          categoryIdentifier: 'transaction',
+          sound: true,
         },
         trigger: null,
       });
-      console.log('Test notification sent!');
+
+      console.log('✅ Test notification sent with action buttons!');
+      console.log('💡 Tap "Categorize" to test the modal flow');
     } catch (error) {
-      console.error('Failed to send test notification:', error);
+      console.error('❌ Failed to send test notification:', error);
     }
   };
 
@@ -307,13 +361,14 @@ export default function HomeScreen() {
         />
 
         {/* SMS auto-detected transaction modal */}
-        {pendingTransaction && (
+        {pendingTransaction && smsInitialExpense && (
           <AddTransactionModal
+            key={pendingTransaction.id}
             visible={showCategorizationModal}
-            newExpense={smsExpense}
+            newExpense={smsInitialExpense}
             onClose={dismissCategorization}
             onExpenseChange={() => {}}
-            onSubmit={() => handleSMSExpenseSubmit(smsExpense)}
+            onSubmit={handleSMSExpenseSubmit}
           />
         )}
       </View>

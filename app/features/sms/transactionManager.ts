@@ -1,36 +1,17 @@
 import * as Notifications from 'expo-notifications';
 import { TypedStorage } from '../../lib/storage';
-import { deduplicator } from './deduplicator';
-import {
-  addNotificationResponseListener,
-  removeNotificationResponseListener,
-  requestNotificationPermissions,
-  sendTransactionNotification,
-  setupNotificationCategories
-} from './notifications';
-import { parseTransactions } from './parser';
-import { SmsListenerSubscription, startRealtimeSMSListener } from './smsListener';
-import {
-  hasSMSPermission,
-  requestSMSPermission,
-  startSMSMonitoring,
-  stopSMSMonitoring
-} from './smsReader';
-import { ParsedTransaction, SMSMessage, TransactionNotification } from './types';
+import { setupNotificationCategories } from './notifications';
+import { ParsedTransaction, TransactionNotification } from './types';
 
 const STORAGE_KEY = 'pending_transactions';
 
 /**
- * Main transaction manager class
+ * Main transaction manager class - Simplified for Native Kotlin Bridge
+ * JS-side monitoring and polling removed in favor of native implementation.
  */
 class TransactionManager {
-  private monitoringInterval: ReturnType<typeof setInterval> | null = null;
-  private realtimeListener: SmsListenerSubscription | null = null;
-  private notificationListener: Notifications.Subscription | null = null;
   private pendingTransactions: Map<string, TransactionNotification> = new Map();
   private loaded = false;
-
-  // No constructor side-effects — everything is lazy
 
   /**
    * Initialize the transaction manager
@@ -44,14 +25,6 @@ class TransactionManager {
       }
 
       await setupNotificationCategories();
-
-      const notifPermission = await requestNotificationPermissions();
-      if (!notifPermission) {
-        console.warn('Notification permission not granted');
-        return false;
-      }
-
-      this.setupNotificationListener();
       return true;
     } catch (error) {
       console.error('Error initializing transaction manager:', error);
@@ -60,177 +33,34 @@ class TransactionManager {
   }
 
   /**
-   * Request SMS permission
+   * Request native permissions
    */
   async requestPermissions(): Promise<boolean> {
-    return await requestSMSPermission();
+    const { status } = await Notifications.requestPermissionsAsync();
+    return status === 'granted';
   }
 
   /**
-   * Check if SMS permission is granted
+   * Check if permissions are granted
    */
   async hasPermissions(): Promise<boolean> {
-    return await hasSMSPermission();
+    const { status } = await Notifications.getPermissionsAsync();
+    return status === 'granted';
   }
 
-  private async processMessages(messages: SMSMessage[]): Promise<void> {
-    console.log('[TM] Processing', messages.length, 'messages');
-    const transactions = parseTransactions(messages);
-    console.log('[TM] Parsed', transactions.length, 'transactions from messages');
-    for (const transaction of transactions) {
-      await this.processTransaction(transaction);
-    }
-  }
-
-  private async processTransaction(transaction: ParsedTransaction): Promise<void> {
-    console.log('[TM] Checking transaction:', transaction.id, transaction.amount, transaction.type);
-    if (deduplicator.isDuplicate(transaction)) {
-      console.log('[TM] Duplicate, skipping:', transaction.id);
-      return;
-    }
-
-    try {
-      const notificationId = await sendTransactionNotification(transaction);
-      const pending: TransactionNotification = {
-        transactionId: transaction.id,
-        transaction,
-        notificationId,
-      };
-      this.pendingTransactions.set(transaction.id, pending);
-      await this.savePendingTransactions();
-      console.log('[TM] Notification sent for:', transaction.id);
-    } catch (error) {
-      console.error('[TM] Error sending notification:', error);
-    }
-  }
-
-  async startMonitoring(intervalMs: number = 15000): Promise<boolean> {
-    const hasPermission = await this.hasPermissions();
-    if (!hasPermission) {
-      console.warn('[TM] SMS permission not granted, cannot start monitoring');
-      return false;
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // 🔥 REAL-TIME SMS LISTENER (BroadcastReceiver)
-    // ═══════════════════════════════════════════════════════════════
-    if (!this.realtimeListener) {
-      console.log('[TM] 🚀 Starting REAL-TIME SMS listener (BroadcastReceiver)...');
-      this.realtimeListener = startRealtimeSMSListener(async (message) => {
-        console.log('[TM] 🔔 Real-time SMS received, processing...');
-        await this.processMessages([message]);
-      });
-
-      if (this.realtimeListener) {
-        console.log('[TM] ✅ Real-time listener is ACTIVE');
-      } else {
-        console.warn('[TM] ⚠️ Real-time listener failed to start');
-      }
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // 📊 POLLING (Fallback + Initial Scan)
-    // ═══════════════════════════════════════════════════════════════
-    if (this.monitoringInterval) {
-      console.log('[TM] Polling already running');
-      return true;
-    }
-
-    // Initial scan of last 24h to catch anything already in inbox
-    console.log('[TM] Running initial SMS scan...');
-    try {
-      const { readRecentSMS } = await import('./smsReader');
-      const initial = await readRecentSMS();
-      console.log('[TM] Initial scan found', initial.length, 'messages');
-      await this.processMessages(initial);
-    } catch (e) {
-      console.error('[TM] Initial scan error:', e);
-    }
-
-    // Poll for new messages as backup (in case real-time listener fails)
-    this.monitoringInterval = startSMSMonitoring(
-      async (newMessages) => {
-        console.log('[TM] 📊 Poll callback received', newMessages.length, 'new messages');
-        await this.processMessages(newMessages);
-      },
-      intervalMs
-    );
-
-    console.log('[TM] Monitoring started: Real-time listener + Polling backup (', intervalMs, 'ms)');
+  /**
+   * Start monitoring (Stubbed - Native Kotlin handles this now)
+   */
+  async startMonitoring(): Promise<boolean> {
+    console.log('[TM] Native Kotlin monitoring is active.');
     return true;
   }
 
   /**
-   * Stop monitoring SMS
+   * Stop monitoring (Stubbed)
    */
   stopMonitoring(): void {
-    // Stop real-time listener
-    if (this.realtimeListener) {
-      this.realtimeListener.remove();
-      this.realtimeListener = null;
-      console.log('[TM] Real-time SMS listener stopped');
-    }
-
-    // Stop polling
-    if (this.monitoringInterval) {
-      stopSMSMonitoring(this.monitoringInterval);
-      this.monitoringInterval = null;
-      console.log('[TM] SMS polling stopped');
-    }
-  }
-
-  /**
-   * Setup notification response listener
-   */
-  private setupNotificationListener(): void {
-    // Don't register twice
-    if (this.notificationListener) return;
-
-    this.notificationListener = addNotificationResponseListener((response) => {
-      const { actionIdentifier, notification } = response;
-      const data = notification.request.content.data;
-
-      if (data.type !== 'bank_transaction') return;
-
-      const transactionId = data.transactionId as string;
-
-      if (actionIdentifier === 'categorize') {
-        // Handle categorize action
-        this.handleCategorizeAction(transactionId);
-      } else if (actionIdentifier === 'ignore') {
-        // Handle ignore action
-        this.handleIgnoreAction(transactionId);
-      }
-    });
-  }
-
-  /**
-   * Handle categorize action
-   */
-  private handleCategorizeAction(transactionId: string): void {
-    const pending = this.pendingTransactions.get(transactionId);
-    if (!pending) return;
-
-    // Emit event or navigate to categorization modal
-    // This should be handled by the app's navigation system
-    console.log('Categorize transaction:', transactionId);
-    
-    // For now, just log - the app should listen to this event
-    // and open the categorization modal
-  }
-
-  /**
-   * Handle ignore action
-   */
-  private async handleIgnoreAction(transactionId: string): Promise<void> {
-    const pending = this.pendingTransactions.get(transactionId);
-    if (!pending) return;
-
-    // Remove from pending
-    this.pendingTransactions.delete(transactionId);
-    await this.savePendingTransactions();
-
-    console.log('Transaction ignored:', transactionId);
+    console.log('[TM] Monitoring is managed by native OS.');
   }
 
   /**
@@ -285,14 +115,7 @@ class TransactionManager {
    * Cleanup resources
    */
   destroy(): void {
-    this.stopMonitoring();
-    
-    if (this.notificationListener) {
-      removeNotificationResponseListener(this.notificationListener);
-      this.notificationListener = null;
-    }
-    
-    deduplicator.destroy();
+    // No-op - Native handles lifecycle
   }
 }
 

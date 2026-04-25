@@ -387,7 +387,7 @@ router.get('/thisMonth', async (req, res) => {
             data: {
                 challenges: challengesWithProgress,
                 spendingSplit: spendingSplit,
-                insights: prevRow?.review_insights || [
+                insights: [
                     `Your monthly income is ${toInr(monthlyIncome)}.`,
                     `Target savings: ${toInr(preferences.monthly_savings_target)}.`,
                     'Keep tracking your expenses to see live insights.',

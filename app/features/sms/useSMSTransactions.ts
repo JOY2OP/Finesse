@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus, Platform } from 'react-native';
+import { NativeTransactionBridge } from './nativeBridge';
 import { transactionManager } from './transactionManager';
 import { ParsedTransaction } from './types';
 
@@ -14,12 +15,53 @@ export interface SMSTransactionState {
   confirmCategorization: (transactionId: string, category: string) => Promise<void>;
 }
 
+/**
+ * useSMSTransactions - React hook that integrates with the Native Kotlin Bridge.
+ * This version ONLY listens to the Native Bridge and does NOT poll SMS via JS.
+ */
 export function useSMSTransactions(): SMSTransactionState {
-  const [isMonitoring, setIsMonitoring] = useState(false);
+  const [isMonitoring, setIsMonitoring] = useState(true);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [pendingTransaction, setPendingTransaction] = useState<ParsedTransaction | null>(null);
   const [showCategorizationModal, setShowCategorizationModal] = useState(false);
   const appState = useRef(AppState.currentState);
+
+  /**
+   * Check for pending transaction from native bridge
+   */
+  const checkNativePendingTransaction = useCallback(async () => {
+    if (!NativeTransactionBridge.isAvailable()) {
+      return;
+    }
+
+    try {
+      const nativeTransaction = await NativeTransactionBridge.getPendingTransaction();
+      
+      if (nativeTransaction) {
+        console.log('[useSMSTransactions] 🔔 Native transaction received:', nativeTransaction);
+        
+        // Convert native transaction to ParsedTransaction format
+        const transaction: ParsedTransaction = {
+          id: `native-${nativeTransaction.timestamp}`,
+          amount: nativeTransaction.amount,
+          type: nativeTransaction.type,
+          merchant: nativeTransaction.merchant || undefined,
+          accountNumber: nativeTransaction.accountNumber || undefined,
+          timestamp: nativeTransaction.timestamp,
+          rawMessage: nativeTransaction.rawMessage,
+          date: new Date(nativeTransaction.timestamp).toISOString().split('T')[0],
+        };
+        
+        setPendingTransaction(transaction);
+        setShowCategorizationModal(true);
+        
+        // Clear the native transaction
+        await NativeTransactionBridge.clearPendingTransaction();
+      }
+    } catch (error) {
+      console.error('[useSMSTransactions] Error checking native transaction:', error);
+    }
+  }, []);
 
   // Initialize on mount
   useEffect(() => {
@@ -28,40 +70,39 @@ export function useSMSTransactions(): SMSTransactionState {
     let notifSubscription: Notifications.Subscription;
 
     const init = async () => {
-      const initialized = await transactionManager.initialize();
-      if (!initialized) return;
-
+      await transactionManager.initialize();
       const permission = await transactionManager.hasPermissions();
       setHasPermission(permission);
 
-      if (permission) {
-        const started = await transactionManager.startMonitoring();
-        setIsMonitoring(started);
-      }
+      // Check for pending transaction from native bridge on mount (if app was opened via notification)
+      await checkNativePendingTransaction();
 
-      // Listen for notification responses (Categorize tap)
-      notifSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      // Listen for notification responses (specifically for any JS fallback, though Kotlin uses Intents)
+      notifSubscription = Notifications.addNotificationResponseReceivedListener(async (response) => {
         const { actionIdentifier, notification } = response;
         const data = notification.request.content.data;
 
-        if (data?.type !== 'bank_transaction') return;
+        console.log('[useSMSTransactions] Notification response action:', actionIdentifier);
 
-        if (actionIdentifier === 'categorize') {
+        // Always check the native bridge when a notification is interacted with
+        await checkNativePendingTransaction();
+
+        // Support for test button / JS-triggered notifications
+        if (data?.type === 'bank_transaction' && actionIdentifier === 'categorize') {
           const transaction = JSON.parse(data.transaction as string) as ParsedTransaction;
           setPendingTransaction(transaction);
           setShowCategorizationModal(true);
-        } else if (actionIdentifier === 'ignore') {
-          transactionManager.removePendingTransaction(data.transactionId as string);
         }
       });
     };
 
     init();
 
-    // Re-scan when app comes to foreground
-    const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+    // Check native bridge whenever app comes to foreground
+    const subscription = AppState.addEventListener('change', async (nextState: AppStateStatus) => {
       if (appState.current.match(/inactive|background/) && nextState === 'active') {
-        transactionManager.startMonitoring();
+        console.log('[useSMSTransactions] App foregrounded, checking bridge...');
+        await checkNativePendingTransaction();
       }
       appState.current = nextState;
     });
@@ -69,18 +110,12 @@ export function useSMSTransactions(): SMSTransactionState {
     return () => {
       subscription.remove();
       notifSubscription?.remove();
-      transactionManager.stopMonitoring();
     };
-  }, []);
+  }, [checkNativePendingTransaction]);
 
   const requestPermissions = useCallback(async () => {
     const granted = await transactionManager.requestPermissions();
     setHasPermission(granted);
-
-    if (granted) {
-      const started = await transactionManager.startMonitoring();
-      setIsMonitoring(started);
-    }
   }, []);
 
   const dismissCategorization = useCallback(() => {
@@ -89,7 +124,6 @@ export function useSMSTransactions(): SMSTransactionState {
   }, []);
 
   const confirmCategorization = useCallback(async (transactionId: string, _category: string) => {
-    // TODO: persist category to your backend/storage here
     await transactionManager.removePendingTransaction(transactionId);
     setShowCategorizationModal(false);
     setPendingTransaction(null);
