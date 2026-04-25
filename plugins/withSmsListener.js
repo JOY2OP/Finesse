@@ -36,7 +36,7 @@ class SMSBroadcastReceiver : BroadcastReceiver() {
         
         // Robust regex patterns for Indian bank SMS
         private val AMOUNT_PATTERN = Pattern.compile(
-            "(?:Rs\\\\.?|INR|₹)\\\\s*([\\\\d,]+\\\\.?\\\\d*)",
+            "(?:Rs\\\\.?|INR|\\u20B9)\\\\s*([\\\\d,]+\\\\.?\\\\d*)",
             Pattern.CASE_INSENSITIVE
         )
         
@@ -51,7 +51,7 @@ class SMSBroadcastReceiver : BroadcastReceiver() {
         )
         
         private val MERCHANT_PATTERN = Pattern.compile(
-            "(?:to|at|from)\\s+([A-Za-z\\s&.-]+?)(?=\\s*(?:Rs\\.?|INR|₹|\\d|,|\\s*,|\\s*UPI|\\s*on|\\s*\\.|A/C|account|$))",
+            "(?:to|at|from)\\\\s+([A-Za-z0-9\\\\s&.\\\\-]+?)(?:\\\\s*,|\\\\s*UPI|\\\\s*on|\\\\s*\\\\.|\\\\s*A/C|$)",
             Pattern.CASE_INSENSITIVE
         )
         
@@ -63,8 +63,8 @@ class SMSBroadcastReceiver : BroadcastReceiver() {
         // Known bank keywords for filtering
         private val BANK_KEYWORDS = listOf(
             "debited", "credited", "debit", "credit", "spent", "withdrawn",
-            "purchase", "deposited", "received", "INR", "Rs.", "₹",
-            "account", "A/C", "balance", "avail", "UPI"
+            "purchase", "deposited", "received", "INR", "Rs.", "A/C",
+            "account", "balance", "avail", "UPI"
         )
     }
     
