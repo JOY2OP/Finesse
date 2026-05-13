@@ -1,7 +1,8 @@
 import * as Notifications from 'expo-notifications';
 import { TypedStorage } from '../../lib/storage';
 import { setupNotificationCategories } from './notifications';
-import { ParsedTransaction, TransactionNotification } from './types';
+import { hasSMSPermission, requestSMSPermission } from './smsReader';
+import { TransactionNotification } from './types';
 
 const STORAGE_KEY = 'pending_transactions';
 
@@ -33,19 +34,29 @@ class TransactionManager {
   }
 
   /**
-   * Request native permissions
+   * Request native permissions (Notifications + SMS)
    */
   async requestPermissions(): Promise<boolean> {
+    // 1. Request Notifications (Android 13+)
     const { status } = await Notifications.requestPermissionsAsync();
-    return status === 'granted';
+    const notifGranted = status === 'granted';
+    
+    // 2. Request SMS permissions
+    const smsGranted = await requestSMSPermission();
+    
+    console.log('[TM] Permissions - Notifications:', notifGranted, 'SMS:', smsGranted);
+    return notifGranted && smsGranted;
   }
 
   /**
-   * Check if permissions are granted
+   * Check if both notification and SMS permissions are granted
    */
   async hasPermissions(): Promise<boolean> {
     const { status } = await Notifications.getPermissionsAsync();
-    return status === 'granted';
+    const notifGranted = status === 'granted';
+    const smsGranted = await hasSMSPermission();
+    
+    return notifGranted && smsGranted;
   }
 
   /**

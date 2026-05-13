@@ -6,19 +6,18 @@ export async function requestSMSPermission(): Promise<boolean> {
   if (Platform.OS !== 'android') return false;
 
   try {
-    const granted = await PermissionsAndroid.request(
+    console.log('[SMS] Requesting multiple permissions...');
+    const results = await PermissionsAndroid.requestMultiple([
       PermissionsAndroid.PERMISSIONS.READ_SMS,
-      {
-        title: 'SMS Permission',
-        message: 'This app needs SMS access to detect bank transactions automatically.',
-        buttonNeutral: 'Ask Me Later',
-        buttonNegative: 'Cancel',
-        buttonPositive: 'OK',
-      }
-    );
-    const result = granted === PermissionsAndroid.RESULTS.GRANTED;
-    console.log('[SMS] Permission request result:', result);
-    return result;
+      PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
+    ]);
+
+    const readGranted = results[PermissionsAndroid.PERMISSIONS.READ_SMS] === PermissionsAndroid.RESULTS.GRANTED;
+    const receiveGranted = results[PermissionsAndroid.PERMISSIONS.RECEIVE_SMS] === PermissionsAndroid.RESULTS.GRANTED;
+
+    console.log('[SMS] Permission results - READ:', readGranted, '| RECEIVE:', receiveGranted);
+
+    return readGranted && receiveGranted;
   } catch (error) {
     console.error('[SMS] Error requesting permission:', error);
     return false;
@@ -28,9 +27,11 @@ export async function requestSMSPermission(): Promise<boolean> {
 export async function hasSMSPermission(): Promise<boolean> {
   if (Platform.OS !== 'android') return false;
   try {
-    const granted = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_SMS);
-    console.log('[SMS] Has permission:', granted);
-    return granted;
+    const read = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_SMS);
+    const receive = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.RECEIVE_SMS);
+    console.log('[SMS] Has permission - READ:', read, '| RECEIVE:', receive);
+    // Return false if either is missing — triggers permission request
+    return read && receive;
   } catch (error) {
     console.error('[SMS] Error checking permission:', error);
     return false;

@@ -36,3 +36,6 @@ Phones.jsx => Verify.jsx
 ---
 #Build dev
 ```eas build --profile development --platform android```
+
+#Build prod
+```eas build --profile production --platform android```

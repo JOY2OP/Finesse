@@ -1,10 +1,28 @@
+import { useSMSTransactions } from '@/app/features/sms';
 import { colors } from '@/constants/theme';
 import { Tabs } from 'expo-router';
 import { BarChart3, Home, Receipt, User } from 'lucide-react-native';
+import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const { hasPermission, requestPermissions } = useSMSTransactions();
+
+  // Request permissions on first load (after login)
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    // Trigger when null (not yet checked) or false (denied)
+    if (hasPermission === true) return;
+
+    const timer = setTimeout(() => {
+      console.log('[TabLayout] Requesting SMS and notification permissions...');
+      requestPermissions();
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [hasPermission, requestPermissions]);
   
   return (
     <Tabs

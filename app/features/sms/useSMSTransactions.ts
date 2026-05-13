@@ -114,8 +114,17 @@ export function useSMSTransactions(): SMSTransactionState {
   }, [checkNativePendingTransaction]);
 
   const requestPermissions = useCallback(async () => {
+    // Request notification permission first (Android 13+)
+    await transactionManager.initialize();
+
+    // Then request SMS permission — this triggers the Android system dialog
     const granted = await transactionManager.requestPermissions();
     setHasPermission(granted);
+
+    if (granted) {
+      const started = await transactionManager.startMonitoring();
+      setIsMonitoring(started);
+    }
   }, []);
 
   const dismissCategorization = useCallback(() => {
