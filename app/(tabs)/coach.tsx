@@ -7,6 +7,7 @@ import GradientBackground from '@/components/GradientBackground';
 import Loading from '@/components/Loading';
 import { coachData } from '@/constants/coachData';
 import { BACKEND_URL } from '@/constants/config';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ScrollView,
@@ -20,7 +21,13 @@ import { supabase } from '../lib/supabase';
 type TabType = 'lastMonth' | 'thisMonth';
 
 export default function CoachTab() {
-  const [activeTab, setActiveTab] = useState<TabType>('lastMonth');
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
+  const [activeTab, setActiveTab] = useState<TabType>(tab === 'thisMonth' ? 'thisMonth' : 'lastMonth');
+
+  // Switch tab if navigated with ?tab=thisMonth
+  useEffect(() => {
+    if (tab === 'thisMonth') setActiveTab('thisMonth');
+  }, [tab]);
   const [activeLimits, setActiveLimits] = useState<{
     food: boolean;
     subscriptions: boolean;

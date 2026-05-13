@@ -1,6 +1,6 @@
+import { useRouter } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-
 interface TransactionSummaryProps {
   expenseTotals: {
     needs?: number;
@@ -10,6 +10,8 @@ interface TransactionSummaryProps {
 }
 
 export default function TransactionSummary({ expenseTotals }: TransactionSummaryProps) {
+  const router = useRouter();
+
   const formatCurrency = (amount: number) => {
     return '₹' + amount.toLocaleString('en-IN', {
       minimumFractionDigits: 0,
@@ -34,14 +36,17 @@ export default function TransactionSummary({ expenseTotals }: TransactionSummary
         
         <View style={styles.changeRow}>
           <View style={styles.changeBadge}>
-            {/* <Text style={styles.changeIcon}>↗</Text> */}
+            <Text style={styles.changeIcon}>↗</Text>
             {/* <Text style={styles.changeText}>12%</Text> */}
-            <Text style={styles.changeText}>-</Text>
+            <Text style={styles.changeText}>0%</Text>
           </View>
           <Text style={styles.changeLabel}>vs last month</Text>
         </View>
 
-        <TouchableOpacity style={styles.insightsButton}>
+        <TouchableOpacity 
+          style={styles.insightsButton}
+          onPress={() => router.push('/coach?tab=thisMonth')}
+        >
           <Text style={styles.insightsButtonText}>View Deep Insights</Text>
         </TouchableOpacity>
       </View>
