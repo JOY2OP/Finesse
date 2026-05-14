@@ -22,8 +22,9 @@ export default function MonthlyChallengeCard({
   statusText,
   color,
 }: MonthlyChallengeCardProps) {
-  // Ensure progress is a valid number between 0-100
-  const validProgress = Math.max(0, Math.min(100, progress || 0));
+  // Bar fills up to 100% visually; label shows the real number (e.g. 126%)
+  const barProgress = Math.max(0, Math.min(100, progress || 0));
+  const labelProgress = Math.max(0, progress || 0);
 
   const getStatusIcon = () => {
     if (status === 'completed') {
@@ -69,22 +70,22 @@ export default function MonthlyChallengeCard({
             style={[
               styles.progressFill,
               { 
-                width: `${validProgress}%`, 
+                width: `${barProgress}%`, 
                 backgroundColor: color 
               },
             ]}
           />
         </View>
         {status === 'completed' && (
-          <Text style={[styles.statusIcon, { color: getStatusColor() }]}>
-            {getStatusIcon()}
+          <Text style={[styles.regularPercentage, { color: getStatusColor() }]}>
+            {labelProgress > 100 ? `${labelProgress}%` : getStatusIcon()}
           </Text>
         )}
         {status === 'warning' && (
-          <Text style={styles.limitText}>{validProgress}%</Text>
+          <Text style={styles.limitText}>{labelProgress}%</Text>
         )}
         {status === 'regular' && (
-          <Text style={styles.regularPercentage}>{validProgress}%</Text>
+          <Text style={styles.regularPercentage}>{labelProgress}%</Text>
         )}
       </View>
     </View>
