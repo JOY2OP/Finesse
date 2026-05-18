@@ -287,7 +287,7 @@ const attachProgress = (challenges, budgetSplit, transactions = []) => {
         // No cap — let progress exceed 100 so the UI can show 126% etc.
         const progress = target > 0 ? Math.round((currentSpend / target) * 100) : 0;
 
-        console.log(`[progress] "${challenge.title}" | titleKey="${titleKey}" | subcategoryMatch=${subcategoryMatch} | currentSpend=${currentSpend} | target=${target} | progress=${progress}%`);
+        // console.log(`[progress] "${challenge.title}" | titleKey="${titleKey}" | subcategoryMatch=${subcategoryMatch} | currentSpend=${currentSpend} | target=${target} | progress=${progress}%`);
         const overAmount  = currentSpend > target ? toInr(Math.round(currentSpend - target)) : null;
 
         let status = 'regular', statusText = '';
@@ -435,20 +435,41 @@ router.get('/thisMonth', async (req, res) => {
         const budgetSplit   = buildBudgetSplit(transactions);
         const monthlyIncome = preferences?.monthly_income || 0;
         const spendingSplit = buildSpendingSplit(budgetSplit, monthlyIncome);
+        const stats         = buildSpendingStats(transactions, monthlyIncome);
 
         const challengesWithProgress = attachProgress(challenges, budgetSplit, transactions);
+
+        // ── Live insights based on current month transactions ──────────────
+        const totalSpent    = budgetSplit.needs + budgetSplit.wants + budgetSplit.investing;
+        const topCat        = stats.rankedCategories[0];
+        const secondCat     = stats.rankedCategories[1];
+        const savingsGap    = (preferences.monthly_savings_target || 0) - budgetSplit.investing;
+        const incomeUsedPct = monthlyIncome > 0 ? Math.round((totalSpent / monthlyIncome) * 100) : 0;
+
+        const insights = transactions.length < 3
+            ? [
+                `Your monthly income is ${toInr(monthlyIncome)}.`,
+                `Target savings: ${toInr(preferences.monthly_savings_target)}.`,
+                'Keep tracking your expenses to see live insights.',
+                'New challenges will be generated at the start of next month.',
+            ]
+            : [
+                `You have used ${incomeUsedPct}% of your income (${toInr(totalSpent)} of ${toInr(monthlyIncome)}) this month.`,
+                topCat
+                    ? `${topCat.category} leads your spending at ${topCat.amount}${secondCat ? `, with ${secondCat.category} close behind at ${secondCat.amount}` : ''}.`
+                    : `Needs are at ${spendingSplit[0].actual} of your income this month.`,
+                `Needs ${spendingSplit[0].actual} vs Wants ${spendingSplit[1].actual} vs Savings ${spendingSplit[2].actual} - target is 50/30/20.`,
+                savingsGap <= 0
+                    ? `Savings target hit. You are ${toInr(Math.abs(savingsGap))} ahead of your ${toInr(preferences.monthly_savings_target)} goal.`
+                    : `${toInr(savingsGap)} left to reach your ${toInr(preferences.monthly_savings_target)} savings target.`,
+            ];
 
         return res.json({
             success: true,
             data: {
                 challenges:   challengesWithProgress,
                 spendingSplit,
-                insights: [
-                    `Your monthly income is ${toInr(monthlyIncome)}.`,
-                    `Target savings: ${toInr(preferences.monthly_savings_target)}.`,
-                    'Keep tracking your expenses to see live insights.',
-                    'New challenges will be generated at the start of next month.',
-                ],
+                insights,
                 summary: prevRow?.review_summary || `🚀 Welcome! Let's hit your ${toInr(monthlyIncome)} budget goal.`,
                 status:  prevRow?.review_status  || 'Good',
             }
