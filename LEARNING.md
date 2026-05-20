@@ -35,6 +35,8 @@ Phones.jsx => Verify.jsx
 
 - `useLocalSearchParams` to send the data between pages eg: @coach.tsx & @TransactionSummary.tsx
 
+- Playstore accepts .aab format(app-bundle in @eas.json)
+
 ---
 #Build dev
 ```eas build --profile development --platform android```

@@ -131,7 +131,7 @@ export default function CoachTab() {
       });
       const result: any = await response.json();
       
-      console.log('📥 Raw API Response:', result);
+      // console.log('📥 Raw API Response:', result);
       
       if (result.success) {
         const rawChallenges = result.data.challenges || [];
@@ -161,8 +161,8 @@ export default function CoachTab() {
           };
         });
         
-        console.log('📊 Spending Split:', result.data.spendingSplit);
-        console.log('🎯 Challenges with progress:', challenges);
+        // console.log('📊 Spending Split:', result.data.spendingSplit);
+        // console.log('🎯 Challenges with progress:', challenges);
         
         setThisMonthData({
           challenges: challenges.length > 0 ? challenges : coachData.thisMonth.challenges,
@@ -171,7 +171,7 @@ export default function CoachTab() {
           summary: result.data.summary || coachData.thisMonth.summary,
           status: result.data.status || 'Good',
         });
-        console.log('✅ Fetched this month data:', challenges);
+        // console.log('✅ Fetched this month data:', challenges);
       } else {
         setThisMonthData(coachData.thisMonth);
       }
