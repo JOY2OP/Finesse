@@ -3,25 +3,25 @@ import { BACKEND_URL } from '@/constants/config';
 import { colors, fontSizes, spacing } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { LogIn } from 'lucide-react-native';
+import { UserPlus } from 'lucide-react-native';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 WebBrowser.maybeCompleteAuthSession();
 
-export default function LoginScreen() {
+export default function SignupScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [email, setEmail] = useState('');
@@ -43,13 +43,13 @@ export default function LoginScreen() {
       } else {
         router.replace('/(onboarding)/preferences');
       }
-    } catch (error) {
-      console.error('Error checking preferences:', error);
+    } catch (err) {
+      console.error('Error checking preferences:', err);
       router.replace('/(onboarding)/preferences');
     }
   };
 
-  const handleEmailLogin = async () => {
+  const handleEmailSignup = async () => {
     if (!email.trim() || !password.trim()) {
       setError('Please enter your email and password.');
       return;
@@ -57,11 +57,11 @@ export default function LoginScreen() {
     try {
       setIsLoading(true);
       setError(null);
-      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      const { error: authError } = await supabase.auth.signUp({ email, password });
       if (authError) throw authError;
       await checkAndRedirect();
     } catch (err) {
-      setError(err.message || 'Failed to sign in.');
+      setError(err.message || 'Failed to create account.');
     } finally {
       setIsLoading(false);
     }
@@ -121,7 +121,7 @@ export default function LoginScreen() {
         }
       }
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('Google login error:', err);
       setError(err.message || 'Failed to sign in with Google');
     } finally {
       setIsLoading(false);
@@ -142,14 +142,14 @@ export default function LoginScreen() {
             {/* Logo Section */}
             <View style={styles.logoSection}>
               <View style={styles.logoContainer}>
-                <LogIn size={40} color={colors.primary} />
+                <UserPlus size={40} color={colors.primary} />
               </View>
-              <Text style={styles.title}>Finesse</Text>
-              <Text style={styles.subtitle}>Smart tracking for your finances</Text>
+              <Text style={styles.title}>Create Account</Text>
+              <Text style={styles.subtitle}>Start tracking your finances today</Text>
             </View>
 
-            {/* Login Section */}
-            <View style={styles.loginSection}>
+            {/* Signup Section */}
+            <View style={styles.signupSection}>
               {error && (
                 <View style={styles.errorContainer}>
                   <Text style={styles.errorText}>{error}</Text>
@@ -177,15 +177,15 @@ export default function LoginScreen() {
               />
 
               <TouchableOpacity
-                style={styles.loginButton}
-                onPress={handleEmailLogin}
+                style={styles.signupButton}
+                onPress={handleEmailSignup}
                 disabled={isLoading}
                 activeOpacity={0.9}
               >
                 {isLoading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.loginButtonText}>Login</Text>
+                  <Text style={styles.signupButtonText}>Sign Up</Text>
                 )}
               </TouchableOpacity>
 
@@ -218,10 +218,10 @@ export default function LoginScreen() {
 
             {/* Footer */}
             <View style={styles.footer}>
-              <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
+              <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
                 <Text style={styles.footerText}>
-                  Don't have an account?{' '}
-                  <Text style={styles.footerLink}>Sign Up</Text>
+                  Already have an account?{' '}
+                  <Text style={styles.footerLink}>Login</Text>
                 </Text>
               </TouchableOpacity>
             </View>
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     marginTop: spacing.xs,
   },
-  loginSection: {
+  signupSection: {
     width: '100%',
     gap: spacing.md,
   },
@@ -282,14 +282,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border.light,
   },
-  loginButton: {
+  signupButton: {
     backgroundColor: colors.primary,
     height: 56,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  loginButtonText: {
+  signupButtonText: {
     fontSize: fontSizes.md,
     fontWeight: '700',
     color: '#FFFFFF',
