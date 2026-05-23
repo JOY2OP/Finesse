@@ -11,3 +11,6 @@ TECHNOLOGIES:
 AUTH: Supabase
 DATABASE: Supabase
 LANGUAGE: Typescript, expo-eas
+
+INSTRUCTIONS:
+BEfore touching /android folder check @withSmsListener.js

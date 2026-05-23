@@ -11,7 +11,7 @@ const path = require('path');
  */
 
 const KOTLIN_FILES = {
-  'SMSBroadcastReceiver.kt': `package com.jman.finesseeas
+  'SMSBroadcastReceiver.kt': `package com.finesse.finance
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -271,7 +271,7 @@ class SMSBroadcastReceiver : BroadcastReceiver() {
     )
 }`,
 
-  'NotificationActionReceiver.kt': `package com.jman.finesseeas
+  'NotificationActionReceiver.kt': `package com.finesse.finance
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -297,7 +297,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
     }
 }`,
 
-  'TransactionModule.kt': `package com.jman.finesseeas
+  'TransactionModule.kt': `package com.finesse.finance
 
 import android.app.Activity
 import android.content.Intent
@@ -420,7 +420,7 @@ class TransactionModule(reactContext: ReactApplicationContext) : ReactContextBas
     }
 }`,
 
-  'TransactionPackage.kt': `package com.jman.finesseeas
+  'TransactionPackage.kt': `package com.finesse.finance
 
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule
@@ -530,8 +530,8 @@ function withSmsListener(config) {
         'main',
         'java',
         'com',
-        'jman',
-        'finesseeas'
+        'finesse',
+        'finance'
       );
       
       // Create directory if it doesn't exist
@@ -554,10 +554,10 @@ function withSmsListener(config) {
         let mainAppContent = fs.readFileSync(mainAppPath, 'utf-8');
         
         // Add import if not present
-        if (!mainAppContent.includes('import com.jman.finesseeas.TransactionPackage')) {
+        if (!mainAppContent.includes('import com.finesse.finance.TransactionPackage')) {
           mainAppContent = mainAppContent.replace(
-            /package com\.jman\.finesseeas/,
-            `package com.jman.finesseeas\n\nimport com.jman.finesseeas.TransactionPackage`
+            /package com\.finesse\.finance/,
+            `package com.finesse.finance\n\nimport com.finesse.finance.TransactionPackage`
           );
         }
         
@@ -588,8 +588,8 @@ function withSmsListener(config) {
         // Add import if not present
         if (!mainActivityContent.includes('import android.content.Intent')) {
           mainActivityContent = mainActivityContent.replace(
-            /package com\.jman\.finesseeas/,
-            `package com.jman.finesseeas\n\nimport android.content.Intent`
+            /package com\.finesse\.finance/,
+            `package com.finesse.finance\n\nimport android.content.Intent`
           );
         }
         

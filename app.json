@@ -17,7 +17,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.jman.finesseeas",
+      "package": "com.finesse.finance",
       "permissions": [
         "android.permission.READ_SMS",
         "android.permission.RECEIVE_SMS"
