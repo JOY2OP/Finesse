@@ -59,6 +59,12 @@
         "projectId": "6371d192-1fb6-479a-a471-2dff814d8ba2"
       }
     },
-    "owner": "j-man"
+    "owner": "j-man",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6371d192-1fb6-479a-a471-2dff814d8ba2"
+    }
   }
 }

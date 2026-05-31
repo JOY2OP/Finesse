@@ -100,10 +100,6 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Endpoint not found' });
 });
 
-app.get("/", (req, res) => {
-  res.send("GOOGLE CLOUD BACKEND, hitting index.js");
-});
-
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Finesse Chat Backend running on port ${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
