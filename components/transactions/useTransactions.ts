@@ -131,7 +131,7 @@ export function useTransactions() {
         category: transaction.category?.toLowerCase() || null,
         subcategory: transaction.subcategory || null,
         date: new Date(transaction.occured_at).toISOString().split('T')[0],
-        time: new Date(transaction.occured_at).toLocaleTimeString('en-US', { 
+        time: new Date(transaction.created_at).toLocaleTimeString('en-US', { 
           hour: '2-digit', 
           minute: '2-digit' 
         }),
@@ -228,7 +228,11 @@ export function useTransactions() {
         amount: parseFloat(newExpense.amount),
         category: newExpense.category.charAt(0).toUpperCase() + newExpense.category.slice(1),
         note: newExpense.note || null,
-        occured_at: new Date(newExpense.date).toISOString(),
+        occured_at: (() => {
+          const now = new Date();
+          const [year, month, day] = newExpense.date.split('-').map(Number);
+          return new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds()).toISOString();
+        })(),
         subcategory: newExpense.subcategory || null,
       };
 

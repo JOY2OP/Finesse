@@ -4,7 +4,7 @@ Features to build and status
 3. Notification when bank SMS appears (kotlin bridge) - DONE
 4. AI COACH (This month and last month subtab) - DONE
 5. Google Auth login - DONE
-6. Manual signup/Login (entering email and password) - PENDING
+6. Manual signup/Login (entering email and password) - DONE
 
 
 TECHNOLOGIES:

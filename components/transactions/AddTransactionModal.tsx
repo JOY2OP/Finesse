@@ -88,6 +88,8 @@ export default function AddTransactionModal({
     onSubmit(internalExpense);
   };
 
+  const isSubmitDisabled = !selectedSubcategory || !internalExpense.amount;
+
   const currentSubcategories = SUBCATEGORIES[internalExpense.category];
 
   // Pan responder for swipe down gesture
@@ -228,9 +230,10 @@ export default function AddTransactionModal({
           {/* Confirm Button */}
           <View style={styles.confirmButtonContainer}>
             <TouchableOpacity 
-              style={styles.confirmButton} 
+              style={[styles.confirmButton, isSubmitDisabled && styles.confirmButtonDisabled]} 
               onPress={handleConfirm}
-              activeOpacity={0.8}
+              activeOpacity={isSubmitDisabled ? 1 : 0.8}
+              disabled={isSubmitDisabled}
             >
               <Text style={styles.confirmButtonText}>{mode === 'edit' ? 'Edit Transaction' : 'Add Transaction'}</Text>
             </TouchableOpacity>
@@ -456,6 +459,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+  },
+  confirmButtonDisabled: {
+    backgroundColor: '#CBD5E1',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   confirmButtonText: {
     fontSize: 16,
