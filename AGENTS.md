@@ -13,4 +13,5 @@ DATABASE: Supabase
 LANGUAGE: Typescript, expo-eas
 
 INSTRUCTIONS:
-BEfore touching /android folder check @withSmsListener.js
+-When creating the new page or a feature remember to use the existing UI layout/padding/margins , color palette, SAME SORT OF UI.
+-Before touching /android folder check @withSmsListener.js
