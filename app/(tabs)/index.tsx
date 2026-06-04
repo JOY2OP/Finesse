@@ -10,7 +10,7 @@ import { useTransactions } from '@/components/transactions/useTransactions';
 import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -112,6 +112,21 @@ export default function HomeScreen() {
     );
   };
 
+  // ── Derived data (must be above any early returns) ──────────────────────────
+
+  // Total per category — always from full expenses for the summary card
+  const expenseTotals = useMemo(() => expenses.reduce((acc, expense) => {
+    const { category, amount } = expense;
+    if (category) acc[category] = (acc[category] || 0) + amount;
+    return acc;
+  }, {} as Record<string, number>), [expenses]);
+
+  // Filtered list — only selected categories, no re-fetch
+  const filteredExpenses = useMemo(
+    () => expenses.filter(e => e.category && selectedCategories.includes(e.category as Category)),
+    [expenses, selectedCategories]
+  );
+
   const handleTestNotification = async () => {
     try {
       // Simulate native Kotlin notification system
@@ -206,44 +221,31 @@ export default function HomeScreen() {
     );
   }
 
-  // Calculate total expenses by category
-  const expenseTotals = expenses.reduce((acc, expense) => {
-    const { category, amount } = expense;
-    if (category) {
-      acc[category] = (acc[category] || 0) + amount;
-    }
-    return acc;
-  }, {} as Record<string, number>);
-
-  // Group expenses by date
-  const groupedExpenses = expenses.reduce((acc, expense) => {
-    // Skip expenses with invalid dates
+  // Group filtered expenses by date
+  const groupedExpenses = filteredExpenses.reduce((acc, expense) => {
     if (!expense.date) return acc;
-    
+
     const date = new Date(expense.date);
-    
-    // Check if date is valid
     if (isNaN(date.getTime())) {
       console.warn('Invalid date for expense:', expense);
       return acc;
     }
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     const expenseDate = new Date(date);
     expenseDate.setHours(0, 0, 0, 0);
 
     const monthShort = date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
     const day = date.getDate();
-    const year = String(date.getFullYear()).slice(-2);
 
     let groupKey: string;
     let displayTitle: string;
-    
+
     if (expenseDate.getTime() === today.getTime()) {
       groupKey = expense.date;
       displayTitle = `TODAY, ${monthShort} ${day}`;
@@ -256,12 +258,7 @@ export default function HomeScreen() {
     }
 
     if (!acc[groupKey]) {
-      acc[groupKey] = {
-        title: displayTitle,
-        date: expense.date,
-        transactions: [],
-        total: 0,
-      };
+      acc[groupKey] = { title: displayTitle, date: expense.date, transactions: [], total: 0 };
     }
 
     acc[groupKey].transactions.push(expense);

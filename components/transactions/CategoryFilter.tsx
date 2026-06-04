@@ -28,13 +28,19 @@ export default function CategoryFilter({ selectedCategories, onToggleCategory }:
             key={category.id}
             style={[
               styles.filterButton,
-              { backgroundColor: category.color }
+              isSelected
+                ? { backgroundColor: category.color }
+                : { backgroundColor: '#F1F5F9', borderColor: category.color },
             ]}
             onPress={() => onToggleCategory(category.id)}
             activeOpacity={0.8}
           >
-            <Text style={styles.filterText}>{category.label}</Text>
-            <Text style={styles.chevron}>▼</Text>
+            <Text style={[styles.filterText, !isSelected && { color: category.color }]}>
+              {category.label}
+            </Text>
+            <Text style={[styles.chevron, !isSelected && { color: category.color }]}>
+              ▼
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -54,6 +60,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
     gap: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
