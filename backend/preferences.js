@@ -71,4 +71,33 @@ router.post('/save', async (req, res) => {
   }
 });
 
+// Update custom categories
+router.put('/custom-categories', async (req, res) => {
+  try {
+    const { user_id, custom_categories } = req.body;
+
+    if (!user_id || !custom_categories) {
+      return res.status(400).json({ error: 'Missing required fields: user_id, custom_categories' });
+    }
+
+    const { data, error } = await supabase
+      .from('preferences')
+      .update({ custom_categories })
+      .eq('user_id', user_id)
+      .select();
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log('Custom categories updated:', data);
+    res.json({ success: true, data: data[0] });
+
+  } catch (error) {
+    console.error('Update custom categories error:', error);
+    res.status(500).json({ error: 'Failed to update custom categories' });
+  }
+});
+
 module.exports = router;

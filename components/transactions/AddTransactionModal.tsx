@@ -1,5 +1,8 @@
+import { useCustomCategories } from '@/hooks/useCustomCategories';
+import { Plus } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Modal, PanResponder, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import AddSubcategoryModal from './AddSubcategoryModal';
 
 export interface NewExpense {
   amount: string;
@@ -64,9 +67,11 @@ export default function AddTransactionModal({
   mode = 'add',
 }: AddTransactionModalProps) {
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
-  // Internal category state so tabs always work regardless of onExpenseChange
   const [internalExpense, setInternalExpense] = useState<NewExpense>(newExpense);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [addSubcategoryFor, setAddSubcategoryFor] = useState<'needs' | 'wants' | 'investing' | null>(null);
+
+  const { customCategories, addCustomSubcategory } = useCustomCategories();
 
   useEffect(() => {
     if (visible) {
@@ -94,157 +99,169 @@ export default function AddTransactionModal({
 
   const isSubmitDisabled = !selectedSubcategory || !internalExpense.amount || isSubmitting;
 
-  const currentSubcategories = SUBCATEGORIES[internalExpense.category];
+  // Merge built-in + custom subcategories for current tab
+  const currentSubcategories = [
+    ...SUBCATEGORIES[internalExpense.category],
+    ...(customCategories[internalExpense.category] || []),
+  ];
 
-  // Pan responder for swipe down gesture
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: (_, gestureState) => {
-      return gestureState.dy > 5;
-    },
+    onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 5,
     onPanResponderRelease: (_, gestureState) => {
-      if (gestureState.dy > 50) {
-        onClose();
-      }
+      if (gestureState.dy > 50) onClose();
     },
   });
 
   return (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <TouchableOpacity 
-          style={styles.backdrop} 
-          activeOpacity={1} 
-          onPress={onClose}
-        />
-        <View style={styles.modalContent}>
-          <View {...panResponder.panHandlers} style={styles.handleContainer}>
-            <View style={styles.handle} />
-          </View>
+    <>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={visible}
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.backdrop}
+            activeOpacity={1}
+            onPress={onClose}
+          />
+          <View style={styles.modalContent}>
+            <View {...panResponder.panHandlers} style={styles.handleContainer}>
+              <View style={styles.handle} />
+            </View>
 
-          <View style={styles.modalHeader}>
-            <View>
+            <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Choose Category</Text>
               <Text style={styles.modalSubtitle}>Classify this transaction to optimize your AI insights.</Text>
             </View>
-          </View>
 
-          {/* Amount and Date Row */}
-          <View style={styles.topInputs}>
-            <View style={styles.amountContainer}>
-              <Text style={styles.currencySymbol}>₹</Text>
-              <TextInput
-                style={styles.amountInput}
-                placeholder="0.00"
-                placeholderTextColor="#CBD5E1"
-                keyboardType="numeric"
-                value={internalExpense.amount}
-                onChangeText={(text) => handleExpenseChange({ ...internalExpense, amount: text })}
-              />
+            {/* Amount and Date Row */}
+            <View style={styles.topInputs}>
+              <View style={styles.amountContainer}>
+                <Text style={styles.currencySymbol}>₹</Text>
+                <TextInput
+                  style={styles.amountInput}
+                  placeholder="0.00"
+                  placeholderTextColor="#CBD5E1"
+                  keyboardType="numeric"
+                  value={internalExpense.amount}
+                  onChangeText={(text) => handleExpenseChange({ ...internalExpense, amount: text })}
+                />
+              </View>
+
+              <View style={styles.dateRow}>
+                <TextInput
+                  style={styles.noteInput}
+                  placeholder="Note (optional)"
+                  placeholderTextColor="#94A3B8"
+                  value={internalExpense.note}
+                  onChangeText={(text) => handleExpenseChange({ ...internalExpense, note: text })}
+                />
+                <TextInput
+                  style={styles.dateInput}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor="#94A3B8"
+                  value={internalExpense.date}
+                  onChangeText={(text) => handleExpenseChange({ ...internalExpense, date: text })}
+                />
+              </View>
             </View>
 
-            <View style={styles.dateRow}>
-              <TextInput
-                style={styles.noteInput}
-                placeholder="Note (optional)"
-                placeholderTextColor="#94A3B8"
-                value={internalExpense.note}
-                onChangeText={(text) => handleExpenseChange({ ...internalExpense, note: text })}
-              />
-              <TextInput
-                style={styles.dateInput}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#94A3B8"
-                value={internalExpense.date}
-                onChangeText={(text) => handleExpenseChange({ ...internalExpense, date: text })}
-              />
+            {/* Category Tabs */}
+            <View style={styles.categoryTabsContainer}>
+              <View style={styles.categoryTabs}>
+                {(['needs', 'wants', 'investing'] as const).map((cat) => {
+                  const isActive = internalExpense.category === cat;
+                  return (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[styles.categoryTab, isActive && styles.categoryTabActive]}
+                      onPress={() => {
+                        handleExpenseChange({ ...internalExpense, category: cat, subcategory: undefined });
+                        setSelectedSubcategory(null);
+                      }}
+                    >
+                      <Text style={[styles.categoryTabText, isActive && styles.categoryTabTextActive]}>
+                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
-          </View>
 
-          {/* Category Tabs */}
-          <View style={styles.categoryTabsContainer}>
-            <View style={styles.categoryTabs}>
-              {(['needs', 'wants', 'investing'] as const).map((cat) => {
-                const isActive = internalExpense.category === cat;
-                return (
-                  <TouchableOpacity
-                    key={cat}
-                    style={[styles.categoryTab, isActive && styles.categoryTabActive]}
-                    onPress={() => {
-                      handleExpenseChange({ ...internalExpense, category: cat, subcategory: undefined });
-                      setSelectedSubcategory(null);
-                    }}
-                  >
-                    <Text style={[styles.categoryTabText, isActive && styles.categoryTabTextActive]}>
-                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Subcategories Grid */}
-          <ScrollView 
-            style={styles.subcategoriesScroll}
-            contentContainerStyle={styles.subcategoriesContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.subcategoriesGrid}>
-              {currentSubcategories.map((subcat) => {
-                const isSelected = selectedSubcategory === subcat.id;
-                return (
-                  <TouchableOpacity
-                    key={subcat.id}
-                    style={styles.subcategoryItem}
-                    onPress={() => handleSubcategorySelect(subcat.id)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[
-                      styles.subcategoryIcon,
-                      isSelected && styles.subcategoryIconSelected
-                    ]}>
-                      <Text style={styles.subcategoryEmoji}>{subcat.emoji}</Text>
-                    </View>
-                    <Text style={[
-                      styles.subcategoryLabel,
-                      isSelected && styles.subcategoryLabelSelected
-                    ]}>
-                      {subcat.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-              
-              {/* Add New Button - Add subcategory*/}
-              {/* <TouchableOpacity style={styles.subcategoryItem} activeOpacity={0.7}>
-                <View style={styles.subcategoryIcon}>
-                  <Text style={styles.addIcon}>+</Text>
-                </View>
-                <Text style={styles.subcategoryLabelAdd}>Add New</Text>
-              </TouchableOpacity> */}
-            </View>
-          </ScrollView>
-
-          {/* Confirm Button */}
-          <View style={styles.confirmButtonContainer}>
-            <TouchableOpacity 
-              style={[styles.confirmButton, isSubmitDisabled && styles.confirmButtonDisabled]} 
-              onPress={handleConfirm}
-              activeOpacity={isSubmitDisabled ? 1 : 0.8}
-              disabled={isSubmitDisabled}
+            {/* Subcategories Grid */}
+            <ScrollView
+              style={styles.subcategoriesScroll}
+              contentContainerStyle={styles.subcategoriesContent}
+              showsVerticalScrollIndicator={false}
             >
-              <Text style={styles.confirmButtonText}>{mode === 'edit' ? 'Edit Transaction' : 'Add Transaction'}</Text>
-            </TouchableOpacity>
+              <View style={styles.subcategoriesGrid}>
+                {currentSubcategories.map((subcat) => {
+                  const isSelected = selectedSubcategory === subcat.id;
+                  return (
+                    <TouchableOpacity
+                      key={subcat.id}
+                      style={styles.subcategoryItem}
+                      onPress={() => handleSubcategorySelect(subcat.id)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.subcategoryIcon, isSelected && styles.subcategoryIconSelected]}>
+                        <Text style={styles.subcategoryEmoji}>{subcat.emoji}</Text>
+                      </View>
+                      <Text style={[styles.subcategoryLabel, isSelected && styles.subcategoryLabelSelected]}>
+                        {subcat.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+
+                {/* + Add new subcategory — last item in grid */}
+                <TouchableOpacity
+                  style={styles.subcategoryItem}
+                  onPress={() => setAddSubcategoryFor(internalExpense.category)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.subcategoryIconAdd}>
+                    <Plus size={28} color="#2B6CEE" />
+                  </View>
+                  <Text style={styles.subcategoryLabelAdd}>Add New</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+
+            {/* Confirm Button */}
+            <View style={styles.confirmButtonContainer}>
+              <TouchableOpacity
+                style={[styles.confirmButton, isSubmitDisabled && styles.confirmButtonDisabled]}
+                onPress={handleConfirm}
+                activeOpacity={isSubmitDisabled ? 1 : 0.8}
+                disabled={isSubmitDisabled}
+              >
+                <Text style={styles.confirmButtonText}>
+                  {mode === 'edit' ? 'Edit Transaction' : 'Add Transaction'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      {/* Add custom subcategory modal — outside main modal so it renders on top */}
+      <AddSubcategoryModal
+        visible={!!addSubcategoryFor}
+        category={addSubcategoryFor ?? 'needs'}
+        onClose={() => setAddSubcategoryFor(null)}
+        onAdd={(label: string, emoji: string) => {
+          if (addSubcategoryFor) {
+            addCustomSubcategory(addSubcategoryFor, label, emoji);
+          }
+          setAddSubcategoryFor(null);
+        }}
+      />
+    </>
   );
 }
 
@@ -419,6 +436,17 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#2B6CEE',
   },
+  subcategoryIconAdd: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1.5,
+    borderColor: '#BFDBFE',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   subcategoryEmoji: {
     fontSize: 28,
   },
@@ -436,14 +464,9 @@ const styles = StyleSheet.create({
   subcategoryLabelAdd: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: '#2B6CEE',
     textAlign: 'center',
     marginTop: 12,
-  },
-  addIcon: {
-    fontSize: 24,
-    color: '#94A3B8',
-    fontWeight: '300',
   },
   confirmButtonContainer: {
     paddingHorizontal: 24,
