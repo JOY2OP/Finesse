@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 type Category = 'needs' | 'wants' | 'investing';
 
 export default function HomeScreen() {
-  const { expenses, isLoading, handleCategoryChange, addExpense, updateExpense } = useTransactions();
+  const { expenses, isLoading, handleCategoryChange, addExpense, updateExpense, deleteExpense } = useTransactions();
   const {
     pendingTransaction,
     showCategorizationModal,
@@ -321,15 +321,17 @@ export default function HomeScreen() {
           
           {/* Transaction Groups */}
           <View style={styles.transactionsContainer}>
-            {sortedGroups.map((group: any) => (
+            {sortedGroups.map((group: any, groupIndex: number) => (
               <TransactionGroup
                 key={group.date}
                 title={group.title}
                 date={group.date}
                 transactions={group.transactions}
                 totalAmount={group.total}
+                isFirstGroup={groupIndex === 0}
                 onCategoryChange={handleCategoryChange}
                 onEditTransaction={handleEditTransaction}
+                onDelete={deleteExpense}
               />
             ))}
           </View>

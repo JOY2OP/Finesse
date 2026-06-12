@@ -332,12 +332,36 @@ export function useTransactions() {
     }
   };
 
+  const deleteExpense = async (expenseId: string): Promise<boolean> => {
+    // Optimistic remove from local state immediately
+    setExpenses(prev => prev.filter(e => e.id !== expenseId));
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/transactions/${expenseId}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        console.error('Failed to delete transaction:', result);
+        // Reload to restore if backend failed
+        loadExpenses();
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      loadExpenses();
+      return false;
+    }
+  };
+
   return {
     expenses,
     isLoading,
     handleCategoryChange,
     addExpense,
     updateExpense,
+    deleteExpense,
     refreshExpenses: loadExpenses,
   };
 }

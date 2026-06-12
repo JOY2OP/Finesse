@@ -117,4 +117,32 @@ router.put('/update-category', async (req, res) => {
   }
 });
 
+// Delete transaction
+router.delete('/:transaction_id', async (req, res) => {
+  try {
+    const { transaction_id } = req.params;
+
+    if (!transaction_id) {
+      return res.status(400).json({ error: 'transaction_id is required' });
+    }
+
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', transaction_id);
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log('Transaction deleted:', transaction_id);
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error('Delete transaction error:', error);
+    res.status(500).json({ error: 'Failed to delete transaction' });
+  }
+});
+
 module.exports = router;
