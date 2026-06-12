@@ -66,11 +66,13 @@ export default function AddTransactionModal({
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   // Internal category state so tabs always work regardless of onExpenseChange
   const [internalExpense, setInternalExpense] = useState<NewExpense>(newExpense);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setInternalExpense(newExpense);
       setSelectedSubcategory(newExpense.subcategory ?? null);
+      setIsSubmitting(false);
     }
   }, [visible]);
 
@@ -85,10 +87,12 @@ export default function AddTransactionModal({
   };
 
   const handleConfirm = () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     onSubmit(internalExpense);
   };
 
-  const isSubmitDisabled = !selectedSubcategory || !internalExpense.amount;
+  const isSubmitDisabled = !selectedSubcategory || !internalExpense.amount || isSubmitting;
 
   const currentSubcategories = SUBCATEGORIES[internalExpense.category];
 
