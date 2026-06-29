@@ -4,6 +4,7 @@ import 'expo-dev-client';
 import { Redirect, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { PostHogProvider } from 'posthog-react-native';
 import { supabase } from './lib/supabase';
 
 export default function RootLayout() {
@@ -34,7 +35,10 @@ export default function RootLayout() {
   const inAuthGroup = segments[0] === '(auth)';
 
   return (
-    <>
+    <PostHogProvider
+      apiKey={process.env.EXPO_PUBLIC_POSTHOG_API_KEY!}
+      options={{ host: process.env.EXPO_PUBLIC_POSTHOG_HOST }}
+    >
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -43,6 +47,6 @@ export default function RootLayout() {
       {!session && !inAuthGroup && <Redirect href="/login" />}
       {session && inAuthGroup && <Redirect href="/" />}
       <StatusBar style="light" />
-    </>
+    </PostHogProvider>
   );
 }
