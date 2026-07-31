@@ -334,7 +334,7 @@ class TransactionModule(reactContext: ReactApplicationContext) : ReactContextBas
     @ReactMethod
     fun getPendingTransaction(promise: Promise) {
         try {
-            val intent = pendingIntent ?: currentActivity?.intent
+            val intent = pendingIntent ?: reactApplicationContext.currentActivity?.intent
             
             if (intent == null) {
                 Log.d(TAG, "No intent available")
@@ -403,7 +403,7 @@ class TransactionModule(reactContext: ReactApplicationContext) : ReactContextBas
     fun clearPendingTransaction(promise: Promise) {
         try {
             pendingIntent = null
-            currentActivity?.intent?.let { intent ->
+            reactApplicationContext.currentActivity?.intent?.let { intent ->
                 intent.removeExtra("action")
                 intent.removeExtra("amount")
                 intent.removeExtra("type")
