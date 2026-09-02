@@ -6,14 +6,14 @@ const BANK_PATTERNS = {
   amount: /(?:Rs\.?|INR)\s*([\d,]+\.?\d*)/i,
   
   // Transaction type patterns
-  debit: /(?:debited|paid|debit|spent|withdrawn|purchase)/i,
-  credit: /(?:credited|credit|received|deposited)/i,
+  debit: /(?:\b(?:debited|paid|paid thru|thru|debit|spent|withdrawn|purchase|transferred)\b|\bdr\.?(?=\s|[:,;-]|$))/i,
+  credit: /(?:\b(?:credited|credit|received|deposited)\b|\bcr\.?(?=\s|[:,;-]|$))/i,
   
   // Account number pattern - last 4 digits
   account: /(?:A\/C|account|a\/c)[\s:]*(?:XX)?(\d{4})/i,
   
   // Merchant/payee pattern
-  merchant: /(?:to|at|from)\s+([A-Za-z0-9\s&.-]+?)(?:\s*,|\s*UPI|\s*on|\s*\.|$)/i,
+  merchant: /(?:\b(?:to|at|from)\b)\s+([A-Za-z0-9\s&.-]+?)(?=\s*[,;]|\s+UPI\b|\s+on\b|\s+A\/C\b|$)/i,
   
   // UPI reference
   upiRef: /UPI\s*Ref[:\s]*(\d+)/i,

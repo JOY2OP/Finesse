@@ -41,17 +41,17 @@ class SMSBroadcastReceiver : BroadcastReceiver() {
         )
         
         private val DEBIT_PATTERN = Pattern.compile(
-            "(?:debited|paid|paid thru|thru|debit|spent|withdrawn|purchase|transferred)",
+            "(?:\\\\b(?:debited|paid|paid thru|thru|debit|spent|withdrawn|purchase|transferred)\\\\b|\\\\bdr\\\\.?(?=\\\\s|[:,;-]|$))",
             Pattern.CASE_INSENSITIVE
         )
         
         private val CREDIT_PATTERN = Pattern.compile(
-            "(?:credited|credit|received|deposited)",
+            "(?:\\\\b(?:credited|credit|received|deposited)\\\\b|\\\\bcr\\\\.?(?=\\\\s|[:,;-]|$))",
             Pattern.CASE_INSENSITIVE
         )
         
         private val MERCHANT_PATTERN = Pattern.compile(
-            "(?:to|at|from)\\\\s+([A-Za-z0-9\\\\s&.\\\\-]+?)(?:\\\\s*,|\\\\s*UPI|\\\\s*on|\\\\s*\\\\.|\\\\s*A/C|$)",
+            "(?:\\\\b(?:to|at|from)\\\\b)\\\\s+([A-Za-z0-9\\\\s&.\\\\-]+?)(?=\\\\s*[,;]|\\\\s+UPI\\\\b|\\\\s+on\\\\b|\\\\s+A/C\\\\b|$)",
             Pattern.CASE_INSENSITIVE
         )
         
@@ -63,7 +63,7 @@ class SMSBroadcastReceiver : BroadcastReceiver() {
         // Known bank keywords for filtering
         private val BANK_KEYWORDS = listOf(
             "debited", "credited", "debit", "credit", "spent", "withdrawn",
-            "purchase", "deposited", "received", "INR", "Rs.", "A/C",
+            "purchase", "deposited", "received", "dr", "cr", "INR", "Rs.", "A/C",
             "account", "balance", "avail", "UPI"
         )
     }
