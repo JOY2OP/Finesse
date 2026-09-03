@@ -94,7 +94,8 @@ const saveMonthlySummary = async (user_id, monthKey, fields) => {
 
 const INVESTING_SUBCATEGORIES = new Set([
     'stocks', 'sip', 'mutual_fund', 'fd', 'fixed_deposit',
-    'mutual fund', 'fixed deposit', 'ppf', 'nps', 'elss', 'etf'
+    'mutual fund', 'fixed deposit', 'ppf', 'nps', 'elss', 'etf',
+    'crypto', 'cryptocurrency'
 ]);
 
 const isInvestingSubcategory = (subcategory = '') =>
@@ -266,6 +267,12 @@ const attachProgress = (challenges, budgetSplit, transactions = []) => {
         const normalise = (s) => s.replace(/[_\s-]+/g, ' ').trim();
         const normTitle = normalise(titleKey);
 
+        // Investments are accumulation goals even if an older AI-generated
+        // challenge incorrectly stored them as a spending-maintenance goal.
+        const challengeType = isInvestingSubcategory(titleKey)
+            ? 'encourage'
+            : challenge.type;
+
         let subcategoryMatch;
         // exact first
         if (subcategorySpend[titleKey] !== undefined) {
@@ -282,7 +289,18 @@ const attachProgress = (challenges, budgetSplit, transactions = []) => {
         }
 
         const bucketSpend = { encourage: budgetSplit.investing, maintain: budgetSplit.needs, curb: budgetSplit.wants };
-        const currentSpend = subcategoryMatch !== undefined ? subcategoryMatch : (bucketSpend[challenge.type] ?? 0);
+        const bucketChallengeTitles = new Set([
+            'hit savings target', 'savings target', 'total savings', 'investing target',
+            'essentials budget', 'needs budget', 'essential spending', 'needs',
+            'wants limit', 'wants budget', 'discretionary spending', 'wants',
+        ]);
+        const shouldUseBucketFallback = bucketChallengeTitles.has(normTitle);
+
+        // A named challenge such as Stocks, SIP, or Groceries must only use
+        // transactions from that matching subcategory. No match means zero.
+        const currentSpend = subcategoryMatch !== undefined
+            ? subcategoryMatch
+            : shouldUseBucketFallback ? (bucketSpend[challengeType] ?? 0) : 0;
 
         // No cap — let progress exceed 100 so the UI can show 126% etc.
         const progress = target > 0 ? Math.round((currentSpend / target) * 100) : 0;
@@ -292,7 +310,7 @@ const attachProgress = (challenges, budgetSplit, transactions = []) => {
 
         let status = 'regular', statusText = '';
 
-        if (challenge.type === 'encourage') {
+        if (challengeType === 'encourage') {
             // Higher spend = better; exceeding target is a bonus
             if (progress >= 100) {
                 status = 'completed';
@@ -300,7 +318,7 @@ const attachProgress = (challenges, budgetSplit, transactions = []) => {
             } else if (progress >= 75) { statusText = 'Almost there'; }
             else if (progress >= 50)   { statusText = 'In progress';  }
             else                       { statusText = 'Just started'; }
-        } else if (challenge.type === 'maintain') {
+        } else if (challengeType === 'maintain') {
             // Exceeding the ceiling is bad
             if (progress >= 100) {
                 status = 'warning';
@@ -308,7 +326,7 @@ const attachProgress = (challenges, budgetSplit, transactions = []) => {
             } else if (progress >= 80) { status = 'warning'; statusText = 'Near limit';  }
             else if (progress >= 50)   {                      statusText = 'On Track';    }
             else                       {                      statusText = 'Well within'; }
-        } else if (challenge.type === 'curb') {
+        } else if (challengeType === 'curb') {
             // Exceeding the curb target is bad
             if (progress >= 100) {
                 status = 'warning';
@@ -318,7 +336,15 @@ const attachProgress = (challenges, budgetSplit, transactions = []) => {
             else                       {                      statusText = 'Great job';  }
         }
 
-        return { ...challenge, progress, status, statusText, currentSpend };
+        return {
+            ...challenge,
+            type: challengeType,
+            missionType: challengeType !== challenge.type ? 'ENCOURAGE' : challenge.missionType,
+            progress,
+            status,
+            statusText,
+            currentSpend,
+        };
     });
 };
 
@@ -333,14 +359,21 @@ router.get('/lastMonth', async (req, res) => {
 
         const cached = await fetchMonthlySummary(user_id, lastMonthKey);
         if (cached && cached.review_ranked_categories) {
+            // Keep AI-written copy cached, but calculate the numeric table from
+            // live transactions so edits and deletions are reflected immediately.
+            const transactions  = await fetchTransactions(user_id, getLastMonthRange());
+            const preferences   = await fetchPreferences(user_id);
+            const monthlyIncome = preferences?.monthly_income || 0;
+            const stats         = buildSpendingStats(transactions, monthlyIncome);
+
             return res.json({
                 success: true,
                 data: {
                     review_status:            cached.review_status,
                     review_summary:           cached.review_summary,
                     review_insights:          cached.review_insights,
-                    review_spending_split:    cached.review_spending_split,
-                    review_ranked_categories: cached.review_ranked_categories,
+                    review_spending_split:    stats.spendingSplit,
+                    review_ranked_categories: stats.rankedCategories,
                 }
             });
         }

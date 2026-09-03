@@ -2,9 +2,9 @@ import { supabase } from '@/app/lib/supabase';
 import GradientBackground from '@/components/GradientBackground';
 import { BACKEND_URL } from '@/constants/config';
 import { colors, fontSizes, spacing } from '@/constants/theme';
-import { useRouter } from 'expo-router';
-import { ArrowRight } from 'lucide-react-native';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowRight, ChevronLeft } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -17,14 +17,68 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function PreferencesScreen() {
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const isEditing = mode === 'edit';
   const [monthlyIncome, setMonthlyIncome] = useState('');
   const [savingsTarget, setSavingsTarget] = useState('');
   const [emergencyFund, setEmergencyFund] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(isEditing);
   const [error, setError] = useState('');
   
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const isBusy = isLoading || isLoadingPreferences;
+
+  useEffect(() => {
+    if (!isEditing) return;
+
+    let isMounted = true;
+
+    const loadPreferences = async () => {
+      try {
+        if (!supabase) throw new Error('Supabase not initialized');
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('No user logged in');
+
+        const response = await fetch(`${BACKEND_URL}/preferences/${user.id}?t=${Date.now()}`, {
+          cache: 'no-cache',
+          headers: { 'Cache-Control': 'no-cache' },
+        });
+        const result = await response.json() as {
+          success: boolean;
+          exists?: boolean;
+          data?: {
+            monthly_income?: number;
+            monthly_savings_target?: number;
+            emergency_fund_target?: number;
+          } | null;
+          error?: string;
+        };
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Failed to load preferences');
+        }
+
+        if (isMounted && result.data) {
+          setMonthlyIncome(String(result.data.monthly_income ?? ''));
+          setSavingsTarget(String(result.data.monthly_savings_target ?? ''));
+          setEmergencyFund(String(result.data.emergency_fund_target ?? ''));
+        }
+      } catch (err: any) {
+        console.error('Error loading preferences:', err);
+        if (isMounted) setError(err.message || 'Failed to load preferences');
+      } finally {
+        if (isMounted) setIsLoadingPreferences(false);
+      }
+    };
+
+    loadPreferences();
+    return () => {
+      isMounted = false;
+    };
+  }, [isEditing]);
 
   const handleIncomeChange = (value: string) => {
     setMonthlyIncome(value);
@@ -98,8 +152,11 @@ export default function PreferencesScreen() {
 
       console.log('Preferences saved successfully');
 
-      // Navigate to main app
-      router.replace('/(tabs)');
+      if (isEditing) {
+        router.back();
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (err: any) {
       console.error('Error saving preferences:', err);
       setError(err.message || 'Failed to save preferences. Please try again.');
@@ -111,6 +168,21 @@ export default function PreferencesScreen() {
   return (
     <GradientBackground>
       <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        {isEditing && (
+          <View style={styles.topBar}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="Back to home"
+            >
+              <ChevronLeft size={24} color={colors.text.primary} />
+            </TouchableOpacity>
+            {/* <Text style={styles.topBarTitle}>Financial Settings</Text> */}
+            <View style={styles.topBarSpacer} />
+          </View>
+        )}
+
         <Animated.View 
           style={styles.content}
           entering={FadeInUp.duration(800).delay(200)}
@@ -119,7 +191,9 @@ export default function PreferencesScreen() {
           <View style={styles.header}>
             <Text style={styles.title}>Set Your Financial Goals</Text>
             <Text style={styles.subtitle}>
-              Help us personalize your experience by setting your financial targets
+              {isEditing
+                ? 'Update the numbers used for your budget and coach insights'
+                : 'Help us personalize your experience by setting your financial targets'}
             </Text>
           </View>
 
@@ -137,7 +211,7 @@ export default function PreferencesScreen() {
                   keyboardType="numeric"
                   value={monthlyIncome}
                   onChangeText={handleIncomeChange}
-                  editable={!isLoading}
+                  editable={!isBusy}
                 />
               </View>
               <Text style={styles.hint}>Your total monthly income</Text>
@@ -155,7 +229,7 @@ export default function PreferencesScreen() {
                   keyboardType="numeric"
                   value={savingsTarget}
                   onChangeText={setSavingsTarget}
-                  editable={!isLoading}
+                  editable={!isBusy}
                 />
               </View>
               <Text style={styles.hint}>Recommended: 20% of income</Text>
@@ -173,7 +247,7 @@ export default function PreferencesScreen() {
                   keyboardType="numeric"
                   value={emergencyFund}
                   onChangeText={setEmergencyFund}
-                  editable={!isLoading}
+                  editable={!isBusy}
                 />
               </View>
               <Text style={styles.hint}>Recommended: 3 months of income</Text>
@@ -188,16 +262,16 @@ export default function PreferencesScreen() {
 
             {/* Submit Button */}
             <TouchableOpacity
-              style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+              style={[styles.submitButton, isBusy && styles.submitButtonDisabled]}
               onPress={handleSubmit}
-              disabled={isLoading}
+              disabled={isBusy}
               activeOpacity={0.8}
             >
-              {isLoading ? (
+              {isBusy ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <>
-                  <Text style={styles.submitButtonText}>Continue</Text>
+                  <Text style={styles.submitButtonText}>{isEditing ? 'Save Changes' : 'Continue'}</Text>
                   <ArrowRight size={20} color="#FFFFFF" />
                 </>
               )}
@@ -231,6 +305,29 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: spacing.lg,
     marginTop: spacing.md,
+  },
+  topBar: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(43, 108, 238, 0.1)',
+  },
+  topBarTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: fontSizes.md,
+    fontWeight: '700',
+    color: colors.text.primary,
+  },
+  topBarSpacer: {
+    width: 40,
   },
   title: {
     fontSize: fontSizes.xxl,

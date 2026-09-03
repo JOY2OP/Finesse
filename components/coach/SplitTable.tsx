@@ -12,11 +12,9 @@ type SplitTableRowProps = {
 
 function SplitTableRow({ category, goal, actual, status, color, isHeader }: SplitTableRowProps) {
   const getStatusIcon = () => {
-    if (status === 'good') return '✓';
-    if (status === 'warning') return '✓';
+    if (status === 'bad') return '✗';
+    if (status === 'warning') return '!';
     return '✓';
-    // if (status === 'warning') return '↗';
-    // return '↗';
   };
 
   const getStatusColor = () => {
@@ -67,14 +65,14 @@ function SplitTableRow({ category, goal, actual, status, color, isHeader }: Spli
 }
 
 type SplitTableProps = {
-  data: Array<{ 
-    category: string; 
+  data: {
+    category: string;
     expected?: string;
     goal?: string;
     actual: string;
     status?: 'good' | 'warning' | 'bad';
     color?: string;
-  }>;
+  }[];
   caption: string;
 };
 
@@ -87,16 +85,23 @@ export default function SplitTable({ data, caption }: SplitTableProps) {
     return '#64748B';
   };
 
-  const getStatus = (category: string, actual: string): 'good' | 'warning' | 'bad' => {
-    // Remove % symbol if present and parse
-    const actualNum = parseInt(actual.replace('%', ''));
+  const getStatus = (category: string, goal: string, actual: string): 'good' | 'warning' | 'bad' => {
+    const goalNum = parseFloat(goal.replace('%', ''));
+    const actualNum = parseFloat(actual.replace('%', ''));
     const lower = category.toLowerCase();
     
-    if (isNaN(actualNum)) return 'warning';
-    
-    if (lower.includes('want') && actualNum > 30) return 'bad';
-    if (lower.includes('need') && actualNum < 50) return 'good';
-    if (lower.includes('saving') && actualNum >= 20) return 'good';
+    if (isNaN(goalNum) || isNaN(actualNum)) return 'warning';
+
+    // Needs and wants are spending caps: exceeding the goal is unfavorable.
+    if (lower.includes('need') || lower.includes('want')) {
+      return actualNum > goalNum ? 'bad' : 'good';
+    }
+
+    // Savings is a minimum target: exceeding it is a positive result.
+    if (lower.includes('saving')) {
+      return actualNum >= goalNum ? 'good' : 'warning';
+    }
+
     return 'warning';
   };
 
@@ -116,16 +121,19 @@ export default function SplitTable({ data, caption }: SplitTableProps) {
           color="#000"
           isHeader
         />
-        {data.map((row, index) => (
-          <SplitTableRow
-            key={index}
-            category={row.category}
-            goal={row.goal || row.expected || ''}
-            actual={row.actual}
-            status={row.status || getStatus(row.category, row.actual)}
-            color={row.color || getCategoryColor(row.category)}
-          />
-        ))}
+        {data.map((row, index) => {
+          const goal = row.goal || row.expected || '';
+          return (
+            <SplitTableRow
+              key={`${row.category}-${index}`}
+              category={row.category}
+              goal={goal}
+              actual={row.actual}
+              status={getStatus(row.category, goal, row.actual)}
+              color={row.color || getCategoryColor(row.category)}
+            />
+          );
+        })}
       </View>
 
       <Text style={styles.tableCaption}>{caption}</Text>

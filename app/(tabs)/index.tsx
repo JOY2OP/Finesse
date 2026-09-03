@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 type Category = 'needs' | 'wants' | 'investing';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const { expenses, isLoading, handleCategoryChange, addExpense, updateExpense, deleteExpense } = useTransactions();
   const {
     pendingTransaction,
@@ -114,12 +115,22 @@ export default function HomeScreen() {
 
   // ── Derived data (must be above any early returns) ──────────────────────────
 
-  // Total per category — always from full expenses for the summary card
-  const expenseTotals = useMemo(() => expenses.reduce((acc, expense) => {
-    const { category, amount } = expense;
-    if (category) acc[category] = (acc[category] || 0) + amount;
-    return acc;
-  }, {} as Record<string, number>), [expenses]);
+  const monthlySpend = useMemo(() => {
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthKey = `${previousMonth.getFullYear()}-${String(previousMonth.getMonth() + 1).padStart(2, '0')}`;
+
+    return expenses.reduce(
+      (totals, expense) => {
+        const monthKey = expense.date.slice(0, 7);
+        if (monthKey === currentMonthKey) totals.current += expense.amount;
+        if (monthKey === lastMonthKey) totals.last += expense.amount;
+        return totals;
+      },
+      { current: 0, last: 0 },
+    );
+  }, [expenses]);
 
   // Filtered list — only selected categories, no re-fetch
   const filteredExpenses = useMemo(
@@ -272,8 +283,6 @@ export default function HomeScreen() {
     (a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
-  const router = useRouter();
-
   return (
     <GradientBackground>
       <View style={styles.container}>
@@ -282,7 +291,12 @@ export default function HomeScreen() {
           style={styles.header}
           entering={FadeIn.duration(600)}
         >
-          <TouchableOpacity style={styles.profileButton}>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => router.push({ pathname: '/(onboarding)/preferences', params: { mode: 'edit' } })}
+            accessibilityRole="button"
+            accessibilityLabel="Open financial settings"
+          >
             <Text style={styles.profileIcon}>👤</Text>
           </TouchableOpacity>
           <Text style={styles.logo}>Finesse</Text>
@@ -311,7 +325,10 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Transaction Summary */}
-          <TransactionSummary expenseTotals={expenseTotals} />
+          <TransactionSummary
+            currentMonthTotal={monthlySpend.current}
+            lastMonthTotal={monthlySpend.last}
+          />
           
           {/* Category Filters */}
           <CategoryFilter 

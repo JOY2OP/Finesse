@@ -2,14 +2,11 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 interface TransactionSummaryProps {
-  expenseTotals: {
-    needs?: number;
-    wants?: number;
-    investing?: number;
-  };
+  currentMonthTotal: number;
+  lastMonthTotal: number;
 }
 
-export default function TransactionSummary({ expenseTotals }: TransactionSummaryProps) {
+export default function TransactionSummary({ currentMonthTotal, lastMonthTotal }: TransactionSummaryProps) {
   const router = useRouter();
 
   const formatCurrency = (amount: number) => {
@@ -19,7 +16,14 @@ export default function TransactionSummary({ expenseTotals }: TransactionSummary
     });
   };
 
-  const totalSpend = (expenseTotals.needs || 0) + (expenseTotals.wants || 0) + (expenseTotals.investing || 0);
+  const percentageChange = lastMonthTotal > 0
+    ? Math.round(Math.abs(((currentMonthTotal - lastMonthTotal) / lastMonthTotal) * 100))
+    : currentMonthTotal > 0 ? 100 : 0;
+
+  // A lower spend is a positive movement, so it uses the upward arrow.
+  const changeIcon = currentMonthTotal < lastMonthTotal
+    ? '↗'
+    : currentMonthTotal > lastMonthTotal ? '↘' : '→';
 
   return (
     <Animated.View 
@@ -32,13 +36,12 @@ export default function TransactionSummary({ expenseTotals }: TransactionSummary
       
       <View style={styles.contentContainer}>
         <Text style={styles.label}>TOTAL SPEND SUMMARY</Text>
-        <Text style={styles.totalAmount}>{formatCurrency(totalSpend)}</Text>
+        <Text style={styles.totalAmount}>{formatCurrency(currentMonthTotal)}</Text>
         
         <View style={styles.changeRow}>
           <View style={styles.changeBadge}>
-            <Text style={styles.changeIcon}>↗</Text>
-            {/* <Text style={styles.changeText}>12%</Text> */}
-            <Text style={styles.changeText}>0%</Text>
+            <Text style={styles.changeIcon}>{changeIcon}</Text>
+            <Text style={styles.changeText}>{percentageChange}%</Text>
           </View>
           <Text style={styles.changeLabel}>vs last month</Text>
         </View>

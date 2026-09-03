@@ -7,8 +7,8 @@ import GradientBackground from '@/components/GradientBackground';
 import Loading from '@/components/Loading';
 import { coachData } from '@/constants/coachData';
 import { BACKEND_URL } from '@/constants/config';
-import { useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -28,38 +28,17 @@ export default function CoachTab() {
   useEffect(() => {
     if (tab === 'thisMonth') setActiveTab('thisMonth');
   }, [tab]);
-  const [activeLimits, setActiveLimits] = useState<{
-    food: boolean;
-    subscriptions: boolean;
-    cabs: boolean;
-  }>({
-    food: false,
-    subscriptions: false,
-    cabs: false,
-  });
   const [lastMonthData, setLastMonthData] = useState<any>(null);
   const [thisMonthData, setThisMonthData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasFetchedData, setHasFetchedData] = useState(false);
-  const [hasFetchedThisMonth, setHasFetchedThisMonth] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    if (activeTab === 'lastMonth' && !hasFetchedData && !lastMonthData) {
-      fetchLastMonthData();
-    } else if (activeTab === 'thisMonth' && !hasFetchedThisMonth && !thisMonthData) {
-      fetchThisMonthData();
-    }
-  }, [activeTab, hasFetchedData, hasFetchedThisMonth, lastMonthData, thisMonthData, refreshKey]);
-
-  const fetchLastMonthData = async () => {
+  const fetchLastMonthData = useCallback(async () => {
     try {
       setIsLoading(true);
       
       if (!supabase) {
         console.error('Supabase not initialized');
         setLastMonthData(coachData.lastMonth);
-        setHasFetchedData(true);
         return;
       }
       
@@ -68,7 +47,6 @@ export default function CoachTab() {
       if (!user) {
         console.error('No user found');
         setLastMonthData(coachData.lastMonth);
-        setHasFetchedData(true);
         return;
       }
 
@@ -94,18 +72,16 @@ export default function CoachTab() {
         // Fallback to static data if API fails
         setLastMonthData(coachData.lastMonth);
       }
-      setHasFetchedData(true);
     } catch (error) {
       console.error('Error fetching last month data:', error);
       // Fallback to static data
       setLastMonthData(coachData.lastMonth);
-      setHasFetchedData(true);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const fetchThisMonthData = async () => {
+  const fetchThisMonthData = useCallback(async () => {
     try {
       setIsLoading(true);
       
@@ -175,36 +151,35 @@ export default function CoachTab() {
       } else {
         setThisMonthData(coachData.thisMonth);
       }
-      setHasFetchedThisMonth(true);
     } catch (error) {
       console.error('Error fetching this month data:', error);
       setThisMonthData(coachData.thisMonth);
-      setHasFetchedThisMonth(true);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Tab screens remain mounted, so refresh whenever Coach becomes active and
+  // whenever the user switches between the month views.
+  useFocusEffect(
+    useCallback(() => {
+      if (activeTab === 'thisMonth') {
+        void fetchThisMonthData();
+      } else {
+        void fetchLastMonthData();
+      }
+    }, [activeTab, fetchLastMonthData, fetchThisMonthData]),
+  );
 
   const isLastMonth = activeTab === 'lastMonth';
   const currentData = isLastMonth ? (lastMonthData || coachData.lastMonth) : (thisMonthData || coachData.thisMonth);
 
-  const handleSetLimit = (category: 'food' | 'subscriptions' | 'cabs') => {
-    setActiveLimits(prev => ({
-      ...prev,
-      [category]: true,
-    }));
-  };
-
   const handleRefresh = () => {
     console.log('🔄 Refreshing data...');
     if (activeTab === 'thisMonth') {
-      setThisMonthData(null);
-      setHasFetchedThisMonth(false);
-      setRefreshKey(prev => prev + 1);
+      void fetchThisMonthData();
     } else {
-      setLastMonthData(null);
-      setHasFetchedData(false);
-      setRefreshKey(prev => prev + 1);
+      void fetchLastMonthData();
     }
   };
 
@@ -298,7 +273,7 @@ export default function CoachTab() {
                     <View style={styles.coachIconContainer}>
                       <Text style={styles.coachIcon}>✨</Text>
                     </View>
-                    <Text style={styles.coachNoteTitle}>Coach's Note</Text>
+                    <Text style={styles.coachNoteTitle}>Coach&apos;s Note</Text>
                   </View>
                   
                   <View style={styles.insightsContainer}>
@@ -337,7 +312,7 @@ export default function CoachTab() {
                 ))
               ) : (
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyText}>No challenges available yet. Complete last month's analysis first!</Text>
+                  <Text style={styles.emptyText}>No challenges available yet. Complete last month&apos;s analysis first!</Text>
                 </View>
               )}
 
@@ -353,7 +328,7 @@ export default function CoachTab() {
                   <View style={styles.coachIconContainer}>
                     <Text style={styles.coachIcon}>✨</Text>
                   </View>
-                  <Text style={styles.coachNoteTitle}>Coach's Note</Text>
+                  <Text style={styles.coachNoteTitle}>Coach&apos;s Note</Text>
                 </View>
                 
                 <View style={styles.insightsContainer}>

@@ -38,7 +38,12 @@ router.post('/save', async (req, res) => {
 
     console.log('Saving preferences:', { user_id, monthly_income, savings_target, emergency_fund });
 
-    if (!user_id || !monthly_income || !savings_target || !emergency_fund) {
+    if (
+      !user_id ||
+      monthly_income == null ||
+      savings_target == null ||
+      emergency_fund == null
+    ) {
       return res.status(400).json({ 
         error: 'Missing required fields: user_id, monthly_income, savings_target, emergency_fund' 
       });
