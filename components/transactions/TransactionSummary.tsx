@@ -20,10 +20,10 @@ export default function TransactionSummary({ currentMonthTotal, lastMonthTotal }
     ? Math.round(Math.abs(((currentMonthTotal - lastMonthTotal) / lastMonthTotal) * 100))
     : currentMonthTotal > 0 ? 100 : 0;
 
-  // A lower spend is a positive movement, so it uses the upward arrow.
+  // Show the direction of the spending change; styling can communicate whether it is favorable.
   const changeIcon = currentMonthTotal < lastMonthTotal
-    ? '↗'
-    : currentMonthTotal > lastMonthTotal ? '↘' : '→';
+    ? '↘'
+    : currentMonthTotal > lastMonthTotal ? '↗' : '→';
 
   return (
     <Animated.View 

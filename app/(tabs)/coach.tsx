@@ -282,11 +282,11 @@ export default function CoachTab() {
                     ))}
                   </View>
 
-                  {lastMonthData.rankedCategories && lastMonthData.rankedCategories.length > 0 && (
+                  {/* {lastMonthData.rankedCategories && lastMonthData.rankedCategories.length > 0 && (
                     <TouchableOpacity style={styles.actionButton}>
                       <Text style={styles.actionButtonText}>Generate Action Plan</Text>
                     </TouchableOpacity>
-                  )}
+                  )} */}
                 </View>
               ) : null}
             </>
